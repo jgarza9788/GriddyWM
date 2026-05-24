@@ -93,6 +93,14 @@ pub fn run(
     mut state: GlobalState,
     no_xwayland: bool,
 ) -> Result<()> {
+    // ── Initialize winit backend ─────────────────────────────────────────────
+    // Must happen BEFORE we overwrite WAYLAND_DISPLAY — winit reads that env
+    // var to connect to the host compositor (e.g. niri). If we set it to our
+    // own socket first, winit deadlocks trying to connect to a server that
+    // hasn't started its event loop yet.
+    let (mut backend, mut winit_evloop) = winit::init::<GlesRenderer>()
+        .map_err(|e| anyhow::anyhow!("Failed to initialize winit backend: {e:?}"))?;
+
     // ── Bind Wayland socket ───────────────────────────────────────────────────
     let socket_name = "wayland-griddy";
     let listener = ListeningSocket::bind(socket_name)
@@ -101,10 +109,6 @@ pub fn run(
         std::env::set_var("WAYLAND_DISPLAY", socket_name);
     }
     tracing::info!("Wayland socket: {socket_name}");
-
-    // ── Initialize winit backend ─────────────────────────────────────────────
-    let (mut backend, mut winit_evloop) = winit::init::<GlesRenderer>()
-        .map_err(|e| anyhow::anyhow!("Failed to initialize winit backend: {e:?}"))?;
 
     let output_size = backend.window_size();
     tracing::info!("Winit window: {}x{}", output_size.w, output_size.h);

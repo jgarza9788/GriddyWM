@@ -4,7 +4,7 @@ A grid-based Wayland compositor written in Rust. Workspaces live on a 2D grid �
 
 ![CI](https://github.com/griddywm/griddywm/actions/workflows/ci.yml/badge.svg)
 
-> **Status: early development.** Core layout engine, IPC, config hot-reload, and the winit dev backend are working. The DRM/KMS backend, renderer polish, and overview UI are in progress.
+> **Status: alpha.** Core layout engine, IPC, config hot-reload, overview mode, session lock, plugin ABI, and the winit dev backend are working. The DRM/KMS backend, GLSL shader pipeline, and font renderer are not yet implemented.
 
 ---
 
@@ -22,7 +22,7 @@ A grid-based Wayland compositor written in Rust. Workspaces live on a 2D grid �
 - **Window rules** — match on `app_id`, `title`, `workspace`, XWayland status; set state, slot, opacity, pin, shader, and more.
 - **Plugin system** — out-of-process `cdylib` plugins via a stable C ABI.
 - **Session restore** — saves window assignments on shutdown, restores on next launch.
-- **Shell-agnostic** — works with WayBar, Waybar, Noctalia, any `wlr-layer-shell` bar. Session file for LightDM / SDDM / GDM / greetd.
+- **Shell-agnostic** — works with Waybar, Noctalia, Quickshell, any `wlr-layer-shell` bar. Session file for LightDM / SDDM / GDM / greetd.
 
 ---
 
@@ -175,6 +175,25 @@ cargo build --release
 sudo install -Dm755 target/release/griddy    /usr/bin/griddy
 sudo install -Dm755 target/release/griddyctl /usr/bin/griddyctl
 sudo install -Dm644 dist/griddy.desktop      /usr/share/wayland-sessions/griddy.desktop
+```
+
+### Uninstall
+
+```bash
+sudo rm -f /usr/bin/griddy
+sudo rm -f /usr/bin/griddyctl
+sudo rm -f /usr/share/wayland-sessions/griddy.desktop
+sudo rm -f /usr/share/man/man1/griddy.1
+sudo rm -f /usr/share/man/man1/griddyctl.1
+sudo rm -rf /usr/share/griddy
+rm -rf ~/.config/griddy
+```
+
+To also remove your user configuration and runtime data:
+
+```bash
+rm -rf ~/.config/griddy
+rm -rf "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/griddy"
 ```
 
 ---
@@ -330,7 +349,7 @@ Full catalogue in [`griddy/src/ipc/events.rs`](griddy/src/ipc/events.rs).
 ## Compatibility
 
 - **Display managers:** LightDM, SDDM, GDM, greetd, ly — standard `.desktop` session file.
-- **Bars / shells:** WayBar, Noctalia, Quickshell — via `wlr-layer-shell` + `ext-workspace-v1`.
+- **Bars / shells:** Waybar, Noctalia, Quickshell — via `wlr-layer-shell` + `ext-workspace-v1`.
 - **Launchers:** Fuzzel, Wofi, Rofi-Wayland, Anyrun, Walker.
 - **Wallpaper:** swaybg, swww, mpvpaper, hyprpaper.
 - **Idle management:** swayidle, hypridle (standard idle-notify protocol).

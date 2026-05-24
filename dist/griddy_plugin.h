@@ -40,6 +40,14 @@ typedef struct GriddyPluginHandle GriddyPluginHandle;
 
 /* ── Window info passed to lifecycle hooks ────────────────────────────────── */
 
+/**
+ * Per-window metadata passed to on_window_pre_open / on_window_post_close.
+ *
+ * LIFETIME: The GriddyWindowInfo pointer and the strings it contains (app_id,
+ * title) are ONLY valid for the duration of the hook call.  Do NOT store the
+ * pointer or copy the raw char* pointers across hook boundaries; copy the
+ * string contents if you need them later (e.g. with strdup).
+ */
 typedef struct GriddyWindowInfo {
     uint32_t    id;       /**< Compositor-internal window ID.                */
     const char *app_id;   /**< Wayland app_id / WM_CLASS (may be NULL).      */

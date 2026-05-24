@@ -25,7 +25,7 @@ use smithay::{
             data_device::DataDeviceState,
             wlr_data_control::DataControlState,
         },
-        session_lock::{LockSurface, SessionLockManagerState},
+        session_lock::{LockSurface, SessionLockManagerState, SessionLocker},
         shell::{
             wlr_layer::{Layer, LayerSurface, WlrLayerShellState},
             xdg::{decoration::XdgDecorationState, XdgShellState},
@@ -131,6 +131,8 @@ pub struct GlobalState {
     pub session_lock_state: SessionLockManagerState,
     /// Active lock surfaces (one per output).
     pub lock_surfaces: Vec<LockSurface>,
+    /// Pending lock confirmation; held until at least one lock surface covers an output.
+    pub pending_lock_confirmation: Option<SessionLocker>,
 
     /// xwayland-shell-v1 protocol state.
     pub xwayland_shell_state: XWaylandShellState,
@@ -213,8 +215,6 @@ pub struct GlobalState {
     // Events accumulated during one loop tick; drained into the IPC server.
     pub pending_events: Vec<Event>,
 
-    // ── Phase 4 additions ────────────────────────────────────────────────────
-
     /// Current cursor position in logical pixels.
     pub cursor_pos: (f64, f64),
 
@@ -230,14 +230,10 @@ pub struct GlobalState {
     /// Per-window slot/position transition animations keyed by WindowId.
     pub move_anims: HashMap<WindowId, MoveAnim>,
 
-    // ── Phase 5 additions ────────────────────────────────────────────────────
-
     /// Whether overview mode is active (§7.2).
     pub is_overview: bool,
     /// Which workspace thumbnail has keyboard focus in overview (§7.2).
     pub overview_focused: (u8, u8),
-
-    // ── Phase 6 additions ────────────────────────────────────────────────────
 
     /// Timestamp of the last user input event (keyboard/pointer/touch).
     pub last_input_instant: std::time::Instant,
@@ -279,6 +275,12 @@ pub struct GlobalState {
     // ── Plugin ABI (§13) ─────────────────────────────────────────────────────
     /// Dynamically-loaded compositor plugins (requires `plugin-abi` feature).
     pub plugins: Vec<crate::plugins::LoadedPlugin>,
+
+    // ── Cheatsheet popup ─────────────────────────────────────────────────────
+    /// PID of the floating cheatsheet terminal, if currently open.
+    pub cheatsheet_pid: Option<u32>,
+    /// True when this is the very first run (no config file existed at launch).
+    pub first_run: bool,
 
     // ── Session persistence (§22.1) ──────────────────────────────────────────
     /// Session state loaded at startup; entries consumed as windows are restored.
@@ -352,6 +354,7 @@ impl GlobalState {
         config: Config,
         config_path: Option<PathBuf>,
         safe_mode: bool,
+        first_run: bool,
     ) -> Result<Self> {
         let dh = display.handle();
         let clock = Clock::new();
@@ -552,6 +555,7 @@ impl GlobalState {
             keyboard_shortcuts_inhibit_state,
             session_lock_state,
             lock_surfaces: Vec::new(),
+            pending_lock_confirmation: None,
             xwayland_shell_state,
             x11_wm: None,
             xwayland_surfaces: Vec::new(),
@@ -618,6 +622,8 @@ impl GlobalState {
             session,
             last_session_save: std::time::Instant::now(),
             safe_mode,
+            cheatsheet_pid: None,
+            first_run,
         };
 
         if safe_mode {
@@ -713,6 +719,19 @@ impl GlobalState {
             tracing::info!("exec: {}", cmd);
             spawn_cmd(cmd);
         }
+
+        // On first run, fire a notification pointing new users at the cheatsheet.
+        if self.first_run {
+            let mod_key = &self.config.input.mod_key;
+            let body = format!(
+                "Press {}+/ to see all keybinds, or run: griddyctl cheatsheet",
+                mod_key
+            );
+            spawn_cmd(&format!(
+                "notify-send -a GriddyWM -t 12000 'Welcome to GriddyWM' '{body}'"
+            ));
+        }
+
         if self.config.startup.honor_xdg_autostart {
             self.run_xdg_autostart();
         }

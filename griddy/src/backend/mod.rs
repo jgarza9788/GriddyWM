@@ -8,7 +8,6 @@ use crate::state::GlobalState;
 
 pub enum BackendType {
     Winit,
-    // Drm will be added in Phase 4
 }
 
 pub fn run_backend(

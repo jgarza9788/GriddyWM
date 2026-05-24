@@ -1,9 +1,12 @@
 //! ext-session-lock-v1 handler.
 //!
-//! When a lock client (swaylock, hyprlock, gtklock) requests a lock:
-//!   1. `lock()` is called — set `is_locked = true`, send configure to all
-//!      existing lock surfaces, call `confirmation.lock()`.
-//!   2. New lock surfaces arrive via `new_surface()`.
+//! Lock flow (§5.1 of the ext-session-lock-v1 spec):
+//!   1. `lock()` is called — set `is_locked = true`, store the `SessionLocker`
+//!      in `pending_lock_confirmation` (do NOT call `.lock()` yet).
+//!   2. The lock client creates a surface via `new_surface()` — once at least one
+//!      output is covered, `confirmation.lock()` is called and `SessionLocked` is
+//!      emitted.  This ordering satisfies the protocol requirement that the locked
+//!      event is only sent after all outputs are covered.
 //!   3. On unlock (`ext_session_lock_v1.unlock` from the client), `unlock()` is
 //!      called — `is_locked = false`, surfaces cleared.
 //!
@@ -26,19 +29,15 @@ impl SessionLockHandler for GlobalState {
 
     fn lock(&mut self, confirmation: SessionLocker) {
         self.is_locked = true;
-        let w = self.grid.output_w as u32;
-        let h = self.grid.output_h as u32;
-        for surface in &self.lock_surfaces {
-            surface.with_pending_state(|s| s.size = Some((w, h).into()));
-            surface.send_configure();
-        }
-        confirmation.lock();
-        self.pending_events.push(Event::SessionLocked);
-        tracing::info!("Session locked");
+        // Don't send the `locked` protocol event yet — defer until a lock surface
+        // actually covers the output (ext-session-lock-v1 §5.1).
+        self.pending_lock_confirmation = Some(confirmation);
+        tracing::info!("Session lock requested; awaiting lock surface");
     }
 
     fn unlock(&mut self) {
         self.is_locked = false;
+        self.pending_lock_confirmation = None;
         self.lock_surfaces.clear();
         self.pending_events.push(Event::SessionUnlocked);
         tracing::info!("Session unlocked");
@@ -50,6 +49,13 @@ impl SessionLockHandler for GlobalState {
         surface.with_pending_state(|s| s.size = Some((w, h).into()));
         surface.send_configure();
         self.lock_surfaces.push(surface);
+
+        // Now that at least one output is covered, confirm the lock.
+        if let Some(confirmation) = self.pending_lock_confirmation.take() {
+            confirmation.lock();
+            self.pending_events.push(Event::SessionLocked);
+            tracing::info!("Session locked (output covered)");
+        }
     }
 }
 

@@ -390,7 +390,24 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             false
         }
         Action::CheatsheetToggle => {
-            tracing::info!("cheatsheet-toggle (not yet implemented)");
+            if let Some(pid) = state.cheatsheet_pid.take() {
+                use nix::sys::signal::{kill, Signal};
+                use nix::unistd::Pid;
+                match kill(Pid::from_raw(pid as i32), Signal::SIGTERM) {
+                    Ok(()) => {
+                        // Successfully signaled — the window will close.
+                        // Reap the zombie the next time the process table is checked;
+                        // for a single cheatsheet instance this is benign.
+                    }
+                    Err(_) => {
+                        // Process already exited — treat this toggle as an open.
+                        tracing::debug!("cheatsheet process {} already gone; reopening", pid);
+                        state.cheatsheet_pid = spawn_cheatsheet_window(&state.config.terminal);
+                    }
+                }
+            } else {
+                state.cheatsheet_pid = spawn_cheatsheet_window(&state.config.terminal);
+            }
             false
         }
 
@@ -996,15 +1013,132 @@ pub fn warp_cursor_to_focused(state: &mut GlobalState) {
     }
 }
 
+// ─── Cheatsheet helpers ───────────────────────────────────────────────────────
+
+/// Spawn a floating terminal showing `griddyctl cheatsheet`.
+/// Returns the child PID on success so the caller can kill it on the next toggle.
+pub fn spawn_cheatsheet_window(configured_terminal: &str) -> Option<u32> {
+    let term = if configured_terminal.is_empty() {
+        detect_terminal()
+    } else {
+        configured_terminal.to_owned()
+    };
+
+    let (prog, args) = cheatsheet_cmd_for(&term);
+    match std::process::Command::new(&prog).args(&args).spawn() {
+        Ok(child) => {
+            tracing::info!(pid = child.id(), "Cheatsheet opened in {}", prog);
+            Some(child.id())
+        }
+        Err(e) => {
+            tracing::warn!("Failed to open cheatsheet in '{}': {}", prog, e);
+            None
+        }
+    }
+}
+
+/// Scan PATH for the first known terminal emulator.
+fn detect_terminal() -> String {
+    use std::os::unix::fs::PermissionsExt;
+    let path_var = std::env::var("PATH").unwrap_or_default();
+    for candidate in ["foot", "kitty", "alacritty", "wezterm", "xterm", "urxvt", "konsole"] {
+        let found = path_var.split(':').any(|dir| {
+            let p = std::path::Path::new(dir).join(candidate);
+            p.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
+        });
+        if found {
+            return candidate.to_owned();
+        }
+    }
+    "xterm".to_owned()
+}
+
+/// Build (program, args) for launching a cheatsheet window in the given terminal.
+/// The inner command pipes `griddyctl cheatsheet` through `less` so the window
+/// stays open until the user presses `q`.
+fn cheatsheet_cmd_for(terminal: &str) -> (String, Vec<String>) {
+    let inner = "griddyctl cheatsheet | less; read -rp 'Press Enter to close...'";
+    let sh_args = vec![
+        "sh".to_owned(),
+        "-c".to_owned(),
+        inner.to_owned(),
+    ];
+
+    let (prog, mut prefix): (_, Vec<String>) = match terminal {
+        "foot"       => ("foot".into(),       vec!["-T".into(), "GriddyWM Keybinds".into()]),
+        "kitty"      => ("kitty".into(),      vec!["--title".into(), "GriddyWM Keybinds".into()]),
+        "alacritty"  => ("alacritty".into(),  vec!["--title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
+        "wezterm"    => ("wezterm".into(),     vec!["start".into(), "--title".into(), "GriddyWM Keybinds".into(), "--".into()]),
+        "konsole"    => ("konsole".into(),     vec!["--title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
+        "urxvt"      => ("urxvt".into(),      vec!["-title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
+        // Generic xterm-compatible fallback: -title + -e
+        _            => (terminal.to_owned(), vec!["-title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
+    };
+
+    prefix.extend(sh_args);
+    (prog, prefix)
+}
+
 fn exec_cmd(cmd: &str) {
-    let mut parts = cmd.split_whitespace();
-    if let Some(prog) = parts.next() {
-        let args: Vec<&str> = parts.collect();
-        match std::process::Command::new(prog).args(&args).spawn() {
+    let parts = shell_split(cmd);
+    if let Some((prog, args)) = parts.split_first() {
+        match std::process::Command::new(prog).args(args).spawn() {
             Ok(child) => tracing::info!(pid = child.id(), "Spawned {}", prog),
             Err(e)    => tracing::warn!("Failed to spawn {}: {}", prog, e),
         }
     }
+}
+
+/// Minimal POSIX-style word splitter: respects single-quoted and double-quoted
+/// tokens so arguments containing spaces can be passed (e.g. `notify-send "hello world"`).
+/// Does not expand variables or globs — this is not a shell.
+fn shell_split(s: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let mut chars = s.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            // Single-quoted: everything until the closing ' is literal.
+            '\'' => {
+                for inner in chars.by_ref() {
+                    if inner == '\'' { break; }
+                    current.push(inner);
+                }
+            }
+            // Double-quoted: only backslash-escaped characters are special.
+            '"' => {
+                while let Some(inner) = chars.next() {
+                    match inner {
+                        '"' => break,
+                        '\\' => {
+                            if let Some(escaped) = chars.next() {
+                                current.push(escaped);
+                            }
+                        }
+                        _ => current.push(inner),
+                    }
+                }
+            }
+            // Backslash outside quotes escapes the next character.
+            '\\' => {
+                if let Some(escaped) = chars.next() {
+                    current.push(escaped);
+                }
+            }
+            // Whitespace ends the current word.
+            c if c.is_whitespace() => {
+                if !current.is_empty() {
+                    words.push(std::mem::take(&mut current));
+                }
+            }
+            c => current.push(c),
+        }
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    words
 }
 
 /// Returns true if the move was refused because target workspace is TF-protected (§6.7.1).

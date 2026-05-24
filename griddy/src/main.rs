@@ -33,11 +33,11 @@ struct Args {
     #[arg(long)]
     check: bool,
 
-    /// Start and replace the running griddy instance (Phase 6)
+    /// Start and replace the running griddy instance
     #[arg(long)]
     replace: bool,
 
-    /// Pin render GPU device e.g. /dev/dri/card1 (Phase 4)
+    /// Pin render GPU device e.g. /dev/dri/card1 (DRM backend)
     #[arg(long)]
     gpu: Option<PathBuf>,
 
@@ -237,7 +237,8 @@ fn main() -> Result<()> {
     }
 
     // ── First-run: copy default config if none exists ─────────────────────────
-    if args.config.is_none() && config::config_path().is_none() {
+    let is_first_run = args.config.is_none() && config::config_path().is_none();
+    if is_first_run {
         first_run_copy_default_config();
     }
 
@@ -277,7 +278,7 @@ fn main() -> Result<()> {
         Display::new().context("Failed to create Wayland display")?;
 
     // ── Build compositor state ────────────────────────────────────────────────
-    let mut state = GlobalState::new(&display, config, resolved_config_path, safe_mode)
+    let mut state = GlobalState::new(&display, config, resolved_config_path, safe_mode, is_first_run)
         .context("Failed to initialize compositor state")?;
 
     // §22.14 — `-d` enables debug overlay automatically.

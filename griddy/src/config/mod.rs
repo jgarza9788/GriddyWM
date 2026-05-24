@@ -70,6 +70,16 @@ pub fn load_config(path: Option<&Path>) -> Result<Config> {
 
     // Process explicit imports.
     for import in &config.imports.clone() {
+        // Reject absolute paths and any path containing ".." components.
+        let raw = std::path::Path::new(import.as_str());
+        if raw.is_absolute() {
+            tracing::warn!("Rejecting absolute import path: {import}");
+            continue;
+        }
+        if raw.components().any(|c| c == std::path::Component::ParentDir) {
+            tracing::warn!("Rejecting path-traversal import: {import}");
+            continue;
+        }
         let import_path = base_dir.join(import);
         if import_path.exists() {
             tracing::debug!("Loading import: {}", import_path.display());
@@ -281,6 +291,14 @@ pub fn apply_env(config: &Config) {
         std::env::set_var("XCURSOR_THEME", &config.theme.cursor.theme);
         std::env::set_var("XCURSOR_SIZE",   config.theme.cursor.size.to_string());
         for (key, val) in &config.env {
+            if key.is_empty() || key.contains('\0') || key.contains('=') {
+                tracing::warn!("Skipping invalid env key: {:?}", key);
+                continue;
+            }
+            if val.contains('\0') {
+                tracing::warn!("Skipping env key with NUL in value: {:?}", key);
+                continue;
+            }
             tracing::debug!("Setting env: {}={}", key, val);
             std::env::set_var(key, val);
         }

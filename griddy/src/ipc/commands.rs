@@ -6,6 +6,11 @@ use crate::state::GlobalState;
 
 // ─── Public entry point ───────────────────────────────────────────────────────
 
+/// Commands that mutate compositor state or spawn processes; blocked while locked.
+fn is_locked_blocked(verb: &str) -> bool {
+    matches!(verb, "kill" | "dispatch" | "reload" | "keyword" | "setprop" | "notify" | "plugin")
+}
+
 /// Handle a single command line, return the response string.
 pub fn handle(cmd: &str, state: &mut GlobalState) -> String {
     if let Some(rest) = cmd.strip_prefix("[[BATCH]]") {
@@ -19,6 +24,15 @@ pub fn handle(cmd: &str, state: &mut GlobalState) -> String {
     };
 
     let (verb, rest) = split_verb(inner);
+
+    if state.is_locked && is_locked_blocked(verb) {
+        tracing::debug!("IPC command '{verb}' blocked: session is locked");
+        return if json {
+            r#"{"ok":false,"error":"session is locked"}"#.into()
+        } else {
+            "error: session is locked".into()
+        };
+    }
 
     match verb {
         "version"         => version(json),

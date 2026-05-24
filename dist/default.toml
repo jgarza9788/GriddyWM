@@ -109,6 +109,11 @@ enable = true
 autosave_interval_s = 60    # save session every N seconds (0 = disable)
 restore_on_start = true      # restore window→workspace assignments on next launch
 
+# ── Terminal emulator ─────────────────────────────────────────────────────────
+# Used by cheatsheet-toggle (Super+/) and other compositor-spawned popups.
+# Empty = auto-detect (tries foot → kitty → alacritty → wezterm → xterm).
+# terminal = "foot"
+
 # ── Startup ───────────────────────────────────────────────────────────────────
 [startup]
 honor_xdg_autostart = true
@@ -144,6 +149,7 @@ honor_xdg_autostart = true
 #   Super+Shift+Ctrl+hjkl  → move window to workspace
 #   Super+o                → overview-toggle
 #   Super+m                → minimap-toggle
+#   Super+/                → cheatsheet-toggle (keybind popup)
 #   Super+w                → placement submap
 #   Super+r                → resize submap
 #   Super+1–9              → workspace by index

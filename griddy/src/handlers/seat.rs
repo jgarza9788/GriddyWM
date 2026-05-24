@@ -15,13 +15,9 @@ impl SeatHandler for GlobalState {
         &mut self.seat_state
     }
 
-    fn focus_changed(&mut self, _seat: &Seat<Self>, _focused: Option<&WlSurface>) {
-        // Phase 2: update window border, IPC event
-    }
+    fn focus_changed(&mut self, _seat: &Seat<Self>, _focused: Option<&WlSurface>) {}
 
-    fn cursor_image(&mut self, _seat: &Seat<Self>, _image: CursorImageStatus) {
-        // Phase 4: render cursor
-    }
+    fn cursor_image(&mut self, _seat: &Seat<Self>, _image: CursorImageStatus) {}
 }
 
 delegate_seat!(GlobalState);

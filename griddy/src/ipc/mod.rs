@@ -9,6 +9,7 @@ pub mod commands;
 pub mod events;
 
 use std::io::{BufRead, BufReader, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::PathBuf;
 use std::time::Duration;
@@ -33,6 +34,7 @@ impl IpcServer {
             .join("griddy")
             .join(instance_sig);
         std::fs::create_dir_all(&socket_dir)?;
+        std::fs::set_permissions(&socket_dir, std::fs::Permissions::from_mode(0o700))?;
 
         let cmd_path = socket_dir.join(".command.sock");
         let evt_path = socket_dir.join(".events.sock");

@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libinput-dev \
+            libseat-dev \
+            libudev-dev \
+            libdrm-dev \
+            libgbm-dev \
+            libegl-dev \
+            libgles2-mesa-dev \
+            libxwayland-dev \
+            libx11-dev \
+            libx11-xcb-dev \
+            libxcb-render-util0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libdbus-1-dev \
+            libsystemd-dev
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build
+        run: cargo build --workspace --locked
+
+      - name: Run tests
+        run: cargo test --workspace --locked
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libinput-dev \
+            libseat-dev \
+            libudev-dev \
+            libdrm-dev \
+            libgbm-dev \
+            libegl-dev \
+            libgles2-mesa-dev \
+            libxwayland-dev \
+            libx11-dev \
+            libx11-xcb-dev \
+            libxcb-render-util0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libdbus-1-dev \
+            libsystemd-dev
+
+      - name: Install Rust toolchain (stable) with clippy
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-clippy-
+
+      - name: Clippy
+        run: cargo clippy --workspace --locked -- -D warnings
+
+  fmt:
+    name: Format check
+    runs-on: ubuntu-latest
+    # Informational only — does not block merge.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (stable) with rustfmt
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check

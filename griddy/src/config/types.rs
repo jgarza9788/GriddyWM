@@ -743,6 +743,10 @@ pub struct Config {
     /// Theme / appearance. Also auto-loaded from theme.toml.
     #[serde(default)]
     pub theme: crate::config::theme::ThemeConfig,
+    /// Preferred terminal emulator for the cheatsheet popup and other spawned UI.
+    /// Empty = auto-detect (tries foot → kitty → alacritty → wezterm → xterm in order).
+    #[serde(default)]
+    pub terminal: String,
 }
 
 #[cfg(test)]

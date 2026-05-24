@@ -10,6 +10,7 @@
 #[cfg(feature = "plugin-abi")]
 mod inner {
     use std::ffi::{CStr, CString};
+    use std::os::unix::fs::MetadataExt;
 
     pub const GRIDDY_PLUGIN_ABI_VERSION: u32 = 1;
 
@@ -171,12 +172,47 @@ mod inner {
 
     // ── Loader ────────────────────────────────────────────────────────────────
 
+    /// Reject plugin paths that are world-writable or group-writable, or that live in /tmp.
+    fn check_plugin_path_safety(path: &str) -> Result<(), String> {
+        let p = std::path::Path::new(path);
+
+        if !p.is_absolute() {
+            return Err(format!("Plugin path must be absolute: '{path}'"));
+        }
+
+        // Refuse obvious world-writable staging directories.
+        for prefix in &["/tmp", "/var/tmp", "/dev/shm"] {
+            if p.starts_with(prefix) {
+                return Err(format!(
+                    "Refusing to load plugin from world-writable directory: '{path}'"
+                ));
+            }
+        }
+
+        let meta = std::fs::metadata(p)
+            .map_err(|e| format!("Cannot stat plugin '{path}': {e}"))?;
+
+        let mode = meta.mode();
+        if mode & 0o002 != 0 {
+            return Err(format!(
+                "Refusing to load world-writable plugin: '{path}' (mode {mode:04o})"
+            ));
+        }
+        if mode & 0o020 != 0 {
+            tracing::warn!("Plugin '{path}' is group-writable (mode {mode:04o}); proceed with caution");
+        }
+
+        Ok(())
+    }
+
     /// Attempt to load a single plugin.  Returns the loaded plugin or an error
     /// string suitable for logging and emitting as a `plugin_error` IPC event.
     pub fn load_plugin(cfg: &PluginConfig) -> Result<LoadedPlugin, String> {
         if !cfg.enabled {
             return Err(format!("Plugin disabled: {}", cfg.path));
         }
+
+        check_plugin_path_safety(&cfg.path)?;
 
         let lib = unsafe {
             libloading::Library::new(&cfg.path)

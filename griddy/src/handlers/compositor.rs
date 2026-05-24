@@ -12,6 +12,7 @@ use smithay::{
         shell::xdg::{SurfaceCachedState, XdgToplevelSurfaceData},
         shm::{ShmHandler, ShmState},
     },
+    xwayland::XWaylandClientData,
 };
 
 use crate::state::{ClientData, GlobalState};
@@ -22,6 +23,9 @@ impl CompositorHandler for GlobalState {
     }
 
     fn client_compositor_state<'a>(&self, client: &'a Client) -> &'a CompositorClientState {
+        if let Some(state) = client.get_data::<XWaylandClientData>() {
+            return &state.compositor_state;
+        }
         &client.get_data::<ClientData>().unwrap().compositor_state
     }
 
