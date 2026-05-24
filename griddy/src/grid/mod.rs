@@ -315,11 +315,9 @@ impl Grid {
                     if initial.state != WindowState::Tiled {
                         // Fullscreen → Tiled adaptation (§6.5.1 fullscreen cascade).
                         state_adapted = Some((initial.state, WindowState::Tiled, Some(*slot)));
-                    } else if let Some(req_slot) = initial.slot {
-                        if req_slot != *slot {
-                            // Half → Quarter slot adaptation (§6.5.1).
-                            slot_adapted = Some((req_slot, *slot));
-                        }
+                    } else if let Some(req_slot) = initial.slot && req_slot != *slot {
+                        // Half → Quarter slot adaptation (§6.5.1).
+                        slot_adapted = Some((req_slot, *slot));
                     }
                 }
                 (WindowState::Tiled, Some(*slot))
@@ -448,12 +446,10 @@ impl Grid {
         }
 
         // §22.4 window swallowing: if this window swallowed another, unswallow it.
-        if let Some(swallowed_id) = window.swallowed_id {
-            if let Some(sw) = self.windows.get_mut(&swallowed_id) {
-                sw.is_swallowed = false;
-                // Give focus back to the swallowed window.
-                self.focused_window = Some(swallowed_id);
-            }
+        if let Some(swallowed_id) = window.swallowed_id && let Some(sw) = self.windows.get_mut(&swallowed_id) {
+            sw.is_swallowed = false;
+            // Give focus back to the swallowed window.
+            self.focused_window = Some(swallowed_id);
         }
 
         Some(id)
@@ -652,14 +648,13 @@ impl Grid {
         let ws = self.ws(ws_coords.0, ws_coords.1);
         // Walk Z-order top→bottom (reverse) so we return the topmost hit.
         for &id in ws.windows_in_z_order().iter().rev() {
-            if let Some(rect) = self.compute_rect(id) {
-                if x >= rect.x as f64
-                    && x < (rect.x + rect.w) as f64
-                    && y >= rect.y as f64
-                    && y < (rect.y + rect.h) as f64
-                {
-                    return Some(id);
-                }
+            if let Some(rect) = self.compute_rect(id)
+                && x >= rect.x as f64
+                && x < (rect.x + rect.w) as f64
+                && y >= rect.y as f64
+                && y < (rect.y + rect.h) as f64
+            {
+                return Some(id);
             }
         }
         None
@@ -805,10 +800,8 @@ impl Grid {
 
     /// Send an xdg_toplevel.close request to the focused window.
     pub fn close_focused(&self) {
-        if let Some(id) = self.focused_window {
-            if let Some(w) = self.windows.get(&id) {
-                w.surface.send_close();
-            }
+        if let Some(id) = self.focused_window && let Some(w) = self.windows.get(&id) {
+            w.surface.send_close();
         }
     }
 
@@ -1080,11 +1073,9 @@ impl Grid {
         let Some(w) = self.windows.get(&id) else { return };
         let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-        if let Some(pos) = stack.iter().position(|&x| x == id) {
-            if pos > 0 {
-                stack.remove(pos);
-                stack.insert(0, id);
-            }
+        if let Some(pos) = stack.iter().position(|&x| x == id) && pos > 0 {
+            stack.remove(pos);
+            stack.insert(0, id);
         }
         self.focused_window = Some(id);
         self.ws_mut(ws_coords.0, ws_coords.1).record_focus(id);
@@ -1124,12 +1115,10 @@ impl Grid {
         let Some(w) = self.windows.get(&id) else { return };
         let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-        if let Some(pos) = stack.iter().position(|&x| x == id) {
-            if pos > 0 {
-                stack.swap(pos, pos - 1);
-                // Re-focus the top of the stack.
-                self.focused_window = Some(stack[0]);
-            }
+        if let Some(pos) = stack.iter().position(|&x| x == id) && pos > 0 {
+            stack.swap(pos, pos - 1);
+            // Re-focus the top of the stack.
+            self.focused_window = Some(stack[0]);
         }
     }
 
@@ -1140,14 +1129,12 @@ impl Grid {
         let Some(w) = self.windows.get(&id) else { return };
         let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-        if let Some(pos) = stack.iter().position(|&x| x == id) {
-            if pos + 1 < stack.len() {
-                stack.swap(pos, pos + 1);
-                // The window that surfaced to index 0 is now the visible/focused one.
-                let new_top = stack[0];
-                self.focused_window = Some(new_top);
-                self.ws_mut(ws_coords.0, ws_coords.1).record_focus(new_top);
-            }
+        if let Some(pos) = stack.iter().position(|&x| x == id) && pos + 1 < stack.len() {
+            stack.swap(pos, pos + 1);
+            // The window that surfaced to index 0 is now the visible/focused one.
+            let new_top = stack[0];
+            self.focused_window = Some(new_top);
+            self.ws_mut(ws_coords.0, ws_coords.1).record_focus(new_top);
         }
     }
 
@@ -1186,8 +1173,8 @@ impl Grid {
     /// workspace is clamped to stay inside the new bounds.
     /// Returns the (old_cols, old_rows) for callers that need to emit events.
     pub fn resize_grid(&mut self, new_cols: u8, new_rows: u8) -> (u8, u8) {
-        let new_cols = new_cols.max(1).min(16);
-        let new_rows = new_rows.max(1).min(16);
+        let new_cols = new_cols.clamp(1, 16);
+        let new_rows = new_rows.clamp(1, 16);
         let old_cols = self.cols;
         let old_rows = self.rows;
 
@@ -1212,7 +1199,8 @@ impl Grid {
 
         // Move windows from out-of-bounds cells into the nearest valid cell.
         // Collect (id, old_ws, new_ws) for windows that need relocation.
-        let relocations: Vec<(WindowId, (u8, u8), (u8, u8))> = self.windows.values()
+        type WindowRelocation = (WindowId, (u8, u8), (u8, u8));
+        let relocations: Vec<WindowRelocation> = self.windows.values()
             .filter_map(|w| {
                 let (wc, wr) = w.workspace;
                 if wc == u8::MAX { return None; } // special workspace
@@ -1260,7 +1248,7 @@ impl Grid {
     ///
     /// Returns the move result so the caller can emit IPC events.
     pub fn move_window_direction_ex(&mut self, direction: FocusDirection) -> Option<MoveDirectionResult> {
-        let Some(id) = self.focused_window else { return None };
+        let id = self.focused_window?;
         let (ws_col, ws_row, mover_state) = match self.windows.get(&id) {
             Some(w) => (w.workspace.0, w.workspace.1, w.current_state),
             None => return None,

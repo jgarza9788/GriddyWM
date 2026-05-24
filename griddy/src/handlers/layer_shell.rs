@@ -26,11 +26,10 @@ impl WlrLayerShellHandler for GlobalState {
 
         // Read the client's requested geometry.
         let cached = compositor::with_states(surface.wl_surface(), |states| {
-            states
+            *states
                 .cached_state
                 .get::<LayerSurfaceCachedState>()
                 .current()
-                .clone()
         });
 
         let ow = self.grid.output_w;

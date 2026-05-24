@@ -476,14 +476,14 @@ impl GlobalState {
         let templates = config_path
             .as_ref()
             .and_then(|p| p.parent())
-            .map(|dir| crate::config::load_templates(dir))
+            .map(crate::config::load_templates)
             .unwrap_or_default();
 
         // Load monitors.toml for per-output configuration (§8.6).
         let monitors_config = config_path
             .as_ref()
             .and_then(|p| p.parent())
-            .map(|dir| crate::config::load_monitors(dir))
+            .map(crate::config::load_monitors)
             .unwrap_or_default();
 
         // Load plugins from plugins.toml in the config directory (§13).
@@ -494,7 +494,7 @@ impl GlobalState {
                 let plugin_cfgs = config_path
                     .as_ref()
                     .and_then(|p| p.parent())
-                    .map(|dir| crate::plugins::load_plugins_file(dir))
+                    .map(crate::plugins::load_plugins_file)
                     .unwrap_or_default();
                 for cfg in &plugin_cfgs {
                     match crate::plugins::load_plugin(cfg) {
@@ -652,7 +652,7 @@ impl GlobalState {
 
         for mapped in &self.layer_surfaces {
             let cached = compositor::with_states(mapped.surface.wl_surface(), |states| {
-                states.cached_state.get::<LayerSurfaceCachedState>().current().clone()
+                *states.cached_state.get::<LayerSurfaceCachedState>().current()
             });
             let px = match cached.exclusive_zone {
                 ExclusiveZone::Exclusive(v) => v as i32,
@@ -833,7 +833,7 @@ impl GlobalState {
 
     /// Timestamp in milliseconds for use in frame callbacks.
     pub fn time_ms(&self) -> u32 {
-        self.clock.now().as_millis() as u32
+        self.clock.now().as_millis()
     }
 
     /// Apply cursor theme/size env vars from the live config (called after theme reload).
@@ -994,10 +994,10 @@ impl GlobalState {
     /// `ACCESSIBILITY_PREFER_REDUCED_MOTION=1` is present in the environment,
     /// all animation durations are collapsed to 0.
     pub fn anim_duration(&self, base_ms: u64) -> u64 {
-        if self.config.animations.respect_prefers_reduced_motion {
-            if std::env::var("ACCESSIBILITY_PREFER_REDUCED_MOTION").as_deref() == Ok("1") {
-                return 0;
-            }
+        if self.config.animations.respect_prefers_reduced_motion
+            && std::env::var("ACCESSIBILITY_PREFER_REDUCED_MOTION").as_deref() == Ok("1")
+        {
+            return 0;
         }
         base_ms
     }
@@ -1042,9 +1042,9 @@ fn exec_idle_cmd(cmd: &str) {
 /// Spawn a shell command string, splitting on whitespace.
 /// Expand a leading `~/` to the user's home directory.
 fn shellexpand_tilde(s: &str) -> String {
-    if s.starts_with("~/") {
+    if let Some(rest) = s.strip_prefix("~/") {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/root".into());
-        format!("{home}/{}", &s[2..])
+        format!("{home}/{rest}")
     } else {
         s.to_owned()
     }
@@ -1086,7 +1086,7 @@ fn parse_constraint_break_key(s: &str) -> Option<(u32, u32)> {
 fn dirs_xdg_autostart() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         PathBuf::from(xdg).join("autostart")
-    } else if let Some(home) = std::env::var("HOME").ok() {
+    } else if let Ok(home) = std::env::var("HOME") {
         PathBuf::from(home).join(".config").join("autostart")
     } else {
         PathBuf::from("/etc/xdg/autostart")

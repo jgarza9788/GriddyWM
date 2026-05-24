@@ -64,6 +64,7 @@ pub fn total_fullscreen_rect(output_w: i32, output_h: i32) -> Rect {
 /// Compute the screen-space rect for a workspace thumbnail in overview mode (§7.2).
 ///
 /// `gap_px` is the gap between thumbnails; `margin_px` is the outer margin.
+#[allow(clippy::too_many_arguments)]
 pub fn overview_thumbnail_rect(
     col: u8, row: u8,
     cols: u8, rows: u8,

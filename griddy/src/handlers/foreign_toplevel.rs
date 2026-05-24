@@ -238,14 +238,12 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
         match request {
             zwlr_foreign_toplevel_handle_v1::Request::Activate { seat: _ } => {
                 let ws = state.grid.windows.get(&id).map(|w| w.workspace);
-                if let Some(coords) = ws {
-                    if coords != state.grid.focused {
-                        state.grid.switch_workspace(coords);
-                        state.pending_events.push(crate::ipc::events::Event::WorkspaceChanged {
-                            col: coords.0,
-                            row: coords.1,
-                        });
-                    }
+                if let Some(coords) = ws && coords != state.grid.focused {
+                    state.grid.switch_workspace(coords);
+                    state.pending_events.push(crate::ipc::events::Event::WorkspaceChanged {
+                        col: coords.0,
+                        row: coords.1,
+                    });
                 }
                 state.grid.set_focus(id);
                 let surf = state.grid.focused_surface().cloned();
@@ -267,22 +265,18 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
             }
             zwlr_foreign_toplevel_handle_v1::Request::SetFullscreen { output: _ } => {
                 let info = state.grid.windows.get(&id).map(|w| (w.workspace, w.current_state));
-                if let Some((_coords, ws)) = info {
-                    if !matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
-                        state.grid.set_focus(id);
-                        state.grid.toggle_fullscreen();
-                        state.wlr_update_all_states();
-                    }
+                if let Some((_coords, ws)) = info && !matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
+                    state.grid.set_focus(id);
+                    state.grid.toggle_fullscreen();
+                    state.wlr_update_all_states();
                 }
             }
             zwlr_foreign_toplevel_handle_v1::Request::UnsetFullscreen => {
                 let info = state.grid.windows.get(&id).map(|w| (w.workspace, w.current_state));
-                if let Some((_coords, ws)) = info {
-                    if matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
-                        state.grid.set_focus(id);
-                        state.grid.toggle_fullscreen();
-                        state.wlr_update_all_states();
-                    }
+                if let Some((_coords, ws)) = info && matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
+                    state.grid.set_focus(id);
+                    state.grid.toggle_fullscreen();
+                    state.wlr_update_all_states();
                 }
             }
             // No-ops for a tiling compositor

@@ -189,7 +189,7 @@ fn default_wallpaper_bg() -> String { "#1a1b26".into() }
 
 // ─── Top-level ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct ThemeConfig {
     /// Built-in preset name to import (e.g. "catppuccin-mocha").
     #[serde(default)]
@@ -215,21 +215,6 @@ pub struct ThemeConfig {
 
     #[serde(default)]
     pub osd: OsdConfig,
-}
-
-impl Default for ThemeConfig {
-    fn default() -> Self {
-        Self {
-            import: String::new(),
-            gaps: GapsConfig::default(),
-            colors: ColorConfig::default(),
-            window: WindowThemeSection::default(),
-            cursor: CursorConfig::default(),
-            blur: BlurConfig::default(),
-            wallpaper: WallpaperConfig::default(),
-            osd: OsdConfig::default(),
-        }
-    }
 }
 
 // ─── OSD config (§8.9) ────────────────────────────────────────────────────────
@@ -281,7 +266,7 @@ fn default_osd_cell_gap() -> i32   { 3 }
 
 // ─── Gaps ─────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct GapsConfig {
     #[serde(default)]
     pub windows: WindowGapConfig,
@@ -289,14 +274,6 @@ pub struct GapsConfig {
     pub workspaces: WorkspaceGapConfig,
 }
 
-impl Default for GapsConfig {
-    fn default() -> Self {
-        Self {
-            windows: WindowGapConfig::default(),
-            workspaces: WorkspaceGapConfig::default(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WindowGapConfig {

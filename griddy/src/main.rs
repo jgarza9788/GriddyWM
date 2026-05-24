@@ -249,23 +249,19 @@ fn main() -> Result<()> {
 
     if args.check {
         // Validate all subsidiary config files too.
-        if let Some(ref path) = resolved_config_path {
-            if let Some(dir) = path.parent() {
-                let _theme   = config::load_config(Some(path)); // already done above
-                let _rules   = dir.join("rules.toml");
-                let _tpls    = config::load_templates(dir);
-                // report any template parse warnings (already logged inside load_templates)
-            }
+        if let Some(ref path) = resolved_config_path && let Some(dir) = path.parent() {
+            let _theme   = config::load_config(Some(path)); // already done above
+            let _rules   = dir.join("rules.toml");
+            let _tpls    = config::load_templates(dir);
+            // report any template parse warnings (already logged inside load_templates)
         }
         println!("Config OK");
         return Ok(());
     }
 
     // ── Replace running instance if requested ─────────────────────────────────
-    if args.replace {
-        if let Err(e) = replace_running_instance() {
-            tracing::warn!("replace: {e}");
-        }
+    if args.replace && let Err(e) = replace_running_instance() {
+        tracing::warn!("replace: {e}");
     }
 
     // ── Apply [env] block ─────────────────────────────────────────────────────

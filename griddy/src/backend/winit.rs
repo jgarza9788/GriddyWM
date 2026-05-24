@@ -1626,26 +1626,24 @@ fn handle_input(
             // Check Scroll:* binds (§9.3) before forwarding to clients.
             let hv = event.amount(Axis::Horizontal).unwrap_or(0.0);
             let vv = event.amount(Axis::Vertical).unwrap_or(0.0);
-            if hv != 0.0 || vv != 0.0 {
-                if let Some(kb) = state.seat.get_keyboard() {
-                    let mods = kb.modifier_state();
-                    // Dispatch vertical bind (if any).
-                    if vv != 0.0 {
-                        let scroll_btn = if vv < 0.0 { 0x150u32 } else { 0x151 }; // Up / Down
-                        if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods) {
-                            if dispatcher::dispatch(action, state) {
-                                state.should_exit = true;
-                            }
-                        }
+            if (hv != 0.0 || vv != 0.0) && let Some(kb) = state.seat.get_keyboard() {
+                let mods = kb.modifier_state();
+                // Dispatch vertical bind (if any).
+                if vv != 0.0 {
+                    let scroll_btn = if vv < 0.0 { 0x150u32 } else { 0x151 }; // Up / Down
+                    if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods)
+                        && dispatcher::dispatch(action, state)
+                    {
+                        state.should_exit = true;
                     }
-                    // Dispatch horizontal bind independently (trackpads can send both axes).
-                    if hv != 0.0 {
-                        let scroll_btn = if hv < 0.0 { 0x152u32 } else { 0x153 }; // Left / Right
-                        if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods) {
-                            if dispatcher::dispatch(action, state) {
-                                state.should_exit = true;
-                            }
-                        }
+                }
+                // Dispatch horizontal bind independently (trackpads can send both axes).
+                if hv != 0.0 {
+                    let scroll_btn = if hv < 0.0 { 0x152u32 } else { 0x153 }; // Left / Right
+                    if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods)
+                        && dispatcher::dispatch(action, state)
+                    {
+                        state.should_exit = true;
                     }
                 }
             }
@@ -1656,11 +1654,11 @@ fn handle_input(
                 if hv != 0.0 { frame = frame.value(Axis::Horizontal, hv); }
                 if vv != 0.0 { frame = frame.value(Axis::Vertical, vv); }
 
-                if let Some(d) = event.amount_v120(Axis::Horizontal) {
-                    if d != 0.0 { frame = frame.v120(Axis::Horizontal, d as i32); }
+                if let Some(d) = event.amount_v120(Axis::Horizontal) && d != 0.0 {
+                    frame = frame.v120(Axis::Horizontal, d as i32);
                 }
-                if let Some(d) = event.amount_v120(Axis::Vertical) {
-                    if d != 0.0 { frame = frame.v120(Axis::Vertical, d as i32); }
+                if let Some(d) = event.amount_v120(Axis::Vertical) && d != 0.0 {
+                    frame = frame.v120(Axis::Vertical, d as i32);
                 }
 
                 pointer.axis(state, frame);
@@ -1822,7 +1820,7 @@ fn snap_slot_for_cursor(
 
     // Half-edges: center 1/3 of perpendicular dimension
     let y_pct = y / screen_h as f64;
-    let in_center_third = y_pct >= 1.0 / 3.0 && y_pct <= 2.0 / 3.0;
+    let in_center_third = (1.0 / 3.0..=2.0 / 3.0).contains(&y_pct);
     if near_left  && in_center_third { return Some(Slot::HalfLeft); }
     if near_right && in_center_third { return Some(Slot::HalfRight); }
 

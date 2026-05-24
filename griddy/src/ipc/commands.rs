@@ -148,7 +148,7 @@ fn grid_cmd(args: &str, json: bool, state: &mut GlobalState) -> String {
 
 fn grid_resize(args: &str, json: bool, state: &mut GlobalState) -> String {
     // Accept "4 4", "4x4", or "4,4".
-    let s = args.trim().replace('x', " ").replace(',', " ");
+    let s = args.trim().replace(['x', ','], " ");
     let parts: Vec<&str> = s.split_whitespace().collect();
     let (Some(cs), Some(rs)) = (parts.first(), parts.get(1)) else {
         return if json {

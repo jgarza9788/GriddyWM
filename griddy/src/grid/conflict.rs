@@ -182,16 +182,14 @@ pub fn resolve(
             };
 
             // Pass 1: Half → Quarter adaptation
-            if slot_adaptation && slot.is_half() {
-                if let Some(adapted) = adapt_half_to_quarter(ws, slot) {
-                    return ResolveResult {
-                        placement: Placement::Tiled {
-                            slot: adapted,
-                            adapted: true,
-                        },
-                        displaced: vec![],
-                    };
-                }
+            if slot_adaptation && slot.is_half() && let Some(adapted) = adapt_half_to_quarter(ws, slot) {
+                return ResolveResult {
+                    placement: Placement::Tiled {
+                        slot: adapted,
+                        adapted: true,
+                    },
+                    displaced: vec![],
+                };
             }
 
             // Pass 2: conflict resolution

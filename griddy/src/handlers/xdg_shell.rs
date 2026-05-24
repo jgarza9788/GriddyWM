@@ -66,42 +66,39 @@ impl XdgShellHandler for GlobalState {
         }
 
         // §6.9 Transient dialogs: if xdg_toplevel.set_parent is set, float centered on parent.
-        if hints.state.is_none() {
-            if let Some(ref par_surface) = parent_surface {
-                let par_id = par_surface.id();
-                if let Some(par_wid) = self.grid.window_id_for_surface(&par_id) {
-                    if let Some(par_rect) = self.grid.compute_rect(par_wid) {
-                        let par_ws = self.grid.windows.get(&par_wid).map(|w| w.workspace);
-                        // Center the dialog on the parent window (assume 600×400 default).
-                        let dw = 600.min(par_rect.w);
-                        let dh = 400.min(par_rect.h);
-                        let dx = par_rect.x + (par_rect.w - dw) / 2;
-                        let dy = par_rect.y + (par_rect.h - dh) / 2;
-                        hints.state = Some(WindowState::Floating);
-                        hints.floating_geom = Some(Rect::new(dx, dy, dw, dh));
-                        if let Some(ws) = par_ws {
-                            hints.workspace = Some(ws);
-                        }
-                    }
+        if hints.state.is_none() && let Some(ref par_surface) = parent_surface {
+            let par_id = par_surface.id();
+            if let Some(par_wid) = self.grid.window_id_for_surface(&par_id)
+                && let Some(par_rect) = self.grid.compute_rect(par_wid)
+            {
+                let par_ws = self.grid.windows.get(&par_wid).map(|w| w.workspace);
+                // Center the dialog on the parent window (assume 600×400 default).
+                let dw = 600.min(par_rect.w);
+                let dh = 400.min(par_rect.h);
+                let dx = par_rect.x + (par_rect.w - dw) / 2;
+                let dy = par_rect.y + (par_rect.h - dh) / 2;
+                hints.state = Some(WindowState::Floating);
+                hints.floating_geom = Some(Rect::new(dx, dy, dw, dh));
+                if let Some(ws) = par_ws {
+                    hints.workspace = Some(ws);
                 }
             }
         }
 
         // §22.1 Session restore: if no rule set workspace/slot yet, check saved session.
-        if hints.workspace.is_none() && hints.slot.is_none() {
-            if let Some(ref mut sess) = self.session {
-                if let Some(entry) = sess.take_hint(&app_id, &title) {
-                    hints.workspace = Some((entry.workspace_col, entry.workspace_row));
-                    if let Some(ref slot_name) = entry.slot {
-                        hints.slot = parse_slot(slot_name);
-                    }
-                    tracing::debug!(
-                        app_id, workspace_col = entry.workspace_col,
-                        workspace_row = entry.workspace_row,
-                        "Session restore applied"
-                    );
-                }
+        if hints.workspace.is_none() && hints.slot.is_none()
+            && let Some(ref mut sess) = self.session
+            && let Some(entry) = sess.take_hint(&app_id, &title)
+        {
+            hints.workspace = Some((entry.workspace_col, entry.workspace_row));
+            if let Some(ref slot_name) = entry.slot {
+                hints.slot = parse_slot(slot_name);
             }
+            tracing::debug!(
+                app_id, workspace_col = entry.workspace_col,
+                workspace_row = entry.workspace_row,
+                "Session restore applied"
+            );
         }
 
         // §6.9 same_app placement policy: if a window with the same app_id is already
@@ -275,10 +272,8 @@ impl XdgShellHandler for GlobalState {
         }
 
         // Update keyboard focus to the new window (unless the rule suppressed it or blocked).
-        if self.grid.focused_window == Some(id) {
-            if let Some(keyboard) = self.seat.get_keyboard() {
-                keyboard.set_focus(self, Some(surface.wl_surface().clone()), SERIAL_COUNTER.next_serial());
-            }
+        if self.grid.focused_window == Some(id) && let Some(keyboard) = self.seat.get_keyboard() {
+            keyboard.set_focus(self, Some(surface.wl_surface().clone()), SERIAL_COUNTER.next_serial());
         }
     }
 
