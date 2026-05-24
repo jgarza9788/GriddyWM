@@ -258,15 +258,15 @@ fn main() -> Result<()> {
         }
         Command::Get(get_cmd) => {
             let query = match get_cmd {
-                GetCommand::Workspace  => "activeworkspace",
+                GetCommand::Workspace => "activeworkspace",
                 GetCommand::Workspaces => "workspaces",
-                GetCommand::Windows    => "windows",
-                GetCommand::Window     => "activewindow",
-                GetCommand::Grid       => "grid",
-                GetCommand::Monitors   => "monitors",
-                GetCommand::Layers     => "layers",
-                GetCommand::Shaders    => "shaders",
-                GetCommand::Cursorpos  => "cursorpos",
+                GetCommand::Windows => "windows",
+                GetCommand::Window => "activewindow",
+                GetCommand::Grid => "grid",
+                GetCommand::Monitors => "monitors",
+                GetCommand::Layers => "layers",
+                GetCommand::Shaders => "shaders",
+                GetCommand::Cursorpos => "cursorpos",
             };
             let resp = send_command(&socket_path, query, args.json)?;
             println!("{resp}");
@@ -312,10 +312,10 @@ fn main() -> Result<()> {
         }
         Command::Session(session_cmd) => {
             let sub = match session_cmd {
-                SessionCommand::Save    => "save",
+                SessionCommand::Save => "save",
                 SessionCommand::Restore => "restore",
-                SessionCommand::Clear   => "clear",
-                SessionCommand::Status  => "status",
+                SessionCommand::Clear => "clear",
+                SessionCommand::Status => "status",
             };
             let resp = send_raw(&socket_path, &format!("session {sub}"), args.json)?;
             println!("{resp}");
@@ -359,9 +359,9 @@ fn main() -> Result<()> {
         }
         Command::Plugin(plugin_cmd) => {
             let cmd = match plugin_cmd {
-                PluginCommand::List             => "plugin list".to_owned(),
-                PluginCommand::Load { path }    => format!("plugin load {path}"),
-                PluginCommand::Unload { name }  => format!("plugin unload {name}"),
+                PluginCommand::List => "plugin list".to_owned(),
+                PluginCommand::Load { path } => format!("plugin load {path}"),
+                PluginCommand::Unload { name } => format!("plugin unload {name}"),
             };
             let resp = send_raw(&socket_path, &cmd, args.json)?;
             println!("{resp}");
@@ -576,39 +576,62 @@ fn import_hyprland(src: &str) -> String {
 
 fn hypr_action_to_griddy(action: &str, args: &str) -> String {
     match action {
-        "killactive"          => "close-window".into(),
-        "exit"                => "quit".into(),
-        "exec"                => format!("exec {args}"),
-        "togglefloating"      => "state-floating-toggle".into(),
-        "fullscreen"          => if args == "1" { "state-fullscreen-toggle".into() } else { "state-total-fullscreen-toggle".into() }
-        "pseudo"              => "state-floating-toggle".into(),
-        "movefocus"           => {
-            match args { "l" => "focus-left", "r" => "focus-right", "u" => "focus-up", "d" => "focus-down", _ => "" }.into()
+        "killactive" => "close-window".into(),
+        "exit" => "quit".into(),
+        "exec" => format!("exec {args}"),
+        "togglefloating" => "state-floating-toggle".into(),
+        "fullscreen" => {
+            if args == "1" {
+                "state-fullscreen-toggle".into()
+            } else {
+                "state-total-fullscreen-toggle".into()
+            }
         }
-        "movewindow"          => {
+        "pseudo" => "state-floating-toggle".into(),
+        "movefocus" => {
+            match args {
+                "l" => "focus-left",
+                "r" => "focus-right",
+                "u" => "focus-up",
+                "d" => "focus-down",
+                _ => "",
+            }
+            .into()
+        }
+        "movewindow" => {
             match args {
                 "l" => "move-window-direction left",
                 "r" => "move-window-direction right",
                 "u" => "move-window-direction up",
                 "d" => "move-window-direction down",
                 _ => "",
-            }.into()
+            }
+            .into()
         }
-        "workspace"           => {
+        "workspace" => {
             if let Ok(n) = args.trim().parse::<u8>() {
                 format!("workspace {}", n - 1)
-            } else { String::new() }
+            } else {
+                String::new()
+            }
         }
-        "movetoworkspace"     => {
+        "movetoworkspace" => {
             if let Ok(n) = args.trim().parse::<u8>() {
                 format!("move-window-to {}", n - 1)
-            } else { String::new() }
+            } else {
+                String::new()
+            }
         }
-        "togglespecialworkspace" => format!("toggle-special {}", if args.is_empty() { "scratchpad" } else { args }),
+        "togglespecialworkspace" => format!(
+            "toggle-special {}",
+            if args.is_empty() { "scratchpad" } else { args }
+        ),
         "movetoworkspacesilent" => {
             if let Ok(n) = args.trim().parse::<u8>() {
                 format!("move-window-to {}", n - 1)
-            } else { String::new() }
+            } else {
+                String::new()
+            }
         }
         _ => String::new(),
     }
@@ -661,10 +684,10 @@ fn import_sway(src: &str) -> String {
                     .iter()
                     .map(|m| match *m {
                         "$mod" | "Mod4" => "$mod".into(),
-                        "Shift"         => "Shift".into(),
+                        "Shift" => "Shift".into(),
                         "Ctrl" | "Control" => "Ctrl".into(),
-                        "Alt" | "Mod1"  => "Alt".into(),
-                        other           => other.into(),
+                        "Alt" | "Mod1" => "Alt".into(),
+                        other => other.into(),
                     })
                     .collect();
                 let key = keys.last().copied().unwrap_or("");
@@ -704,10 +727,16 @@ fn import_sway(src: &str) -> String {
     out.push_str("[window.focused]\n");
     out.push_str(&format!("border_px = {border_px}\n\n"));
 
-    for bind in &binds { out.push_str(bind); out.push('\n'); }
+    for bind in &binds {
+        out.push_str(bind);
+        out.push('\n');
+    }
     if !unmapped.is_empty() {
         out.push_str("\n# Unmapped Sway binds:\n");
-        for u in &unmapped { out.push_str(u); out.push('\n'); }
+        for u in &unmapped {
+            out.push_str(u);
+            out.push('\n');
+        }
     }
     out
 }
@@ -715,27 +744,27 @@ fn import_sway(src: &str) -> String {
 fn sway_action_to_griddy(action: &str) -> String {
     let action = action.trim();
     match action {
-        "kill"       => "close-window".into(),
-        "exit"       => "quit".into(),
+        "kill" => "close-window".into(),
+        "exit" => "quit".into(),
         "floating toggle" => "state-floating-toggle".into(),
         "fullscreen toggle" => "state-fullscreen-toggle".into(),
         a if a.starts_with("exec ") => a.to_owned(),
         a if a.starts_with("focus ") => {
             match a.strip_prefix("focus ").unwrap_or("").trim() {
-                "left"  => "focus-left".into(),
+                "left" => "focus-left".into(),
                 "right" => "focus-right".into(),
-                "up"    => "focus-up".into(),
-                "down"  => "focus-down".into(),
+                "up" => "focus-up".into(),
+                "down" => "focus-down".into(),
                 _ => String::new(),
             }
         }
         a if a.starts_with("move ") => {
             let rest = a.strip_prefix("move ").unwrap_or("").trim();
             match rest {
-                "left"  => "move-window-direction left".into(),
+                "left" => "move-window-direction left".into(),
                 "right" => "move-window-direction right".into(),
-                "up"    => "move-window-direction up".into(),
-                "down"  => "move-window-direction down".into(),
+                "up" => "move-window-direction up".into(),
+                "down" => "move-window-direction down".into(),
                 _ => String::new(),
             }
         }
@@ -743,7 +772,9 @@ fn sway_action_to_griddy(action: &str) -> String {
             let ws = a.strip_prefix("workspace ").unwrap_or("").trim();
             if let Ok(n) = ws.parse::<u8>() {
                 format!("workspace {}", n - 1)
-            } else { String::new() }
+            } else {
+                String::new()
+            }
         }
         _ => String::new(),
     }
@@ -765,18 +796,22 @@ fn import_niri(src: &str) -> String {
             let action_part = line.split('{').nth(1).unwrap_or("").trim().trim_end_matches('}').trim();
             let keys: Vec<&str> = before.split('+').collect();
             if keys.len() >= 2 {
-                let mods_vec: Vec<String> = keys[..keys.len()-1].iter().map(|m| match *m {
-                    "Mod" | "Super" => "$mod".into(),
-                    "Shift"         => "Shift".into(),
-                    "Ctrl"          => "Ctrl".into(),
-                    "Alt"           => "Alt".into(),
-                    other           => other.into(),
-                }).collect();
+                let mods_vec: Vec<String> = keys[..keys.len() - 1]
+                    .iter()
+                    .map(|m| match *m {
+                        "Mod" | "Super" => "$mod".into(),
+                        "Shift" => "Shift".into(),
+                        "Ctrl" => "Ctrl".into(),
+                        "Alt" => "Alt".into(),
+                        other => other.into(),
+                    })
+                    .collect();
                 let key = keys.last().copied().unwrap_or("").trim_end_matches(';');
                 let action = niri_action_to_griddy(action_part.trim_end_matches(';').trim());
                 if !action.is_empty() {
-                    let mods_toml = if mods_vec.is_empty() { String::new() }
-                    else {
+                    let mods_toml = if mods_vec.is_empty() {
+                        String::new()
+                    } else {
                         let joined = mods_vec.iter().map(|m| format!("{m:?}")).collect::<Vec<_>>().join(", ");
                         format!("mods = [{joined}]\n")
                     };
@@ -803,26 +838,36 @@ fn import_niri(src: &str) -> String {
     out.push_str("[window.focused]\n");
     out.push_str(&format!("border_px = {border_px}\n\n"));
 
-    for bind in &binds { out.push_str(bind); out.push('\n'); }
+    for bind in &binds {
+        out.push_str(bind);
+        out.push('\n');
+    }
     if !unmapped.is_empty() {
         out.push_str("\n# Unmapped Niri binds:\n");
-        for u in &unmapped { out.push_str(u); out.push('\n'); }
+        for u in &unmapped {
+            out.push_str(u);
+            out.push('\n');
+        }
     }
     out
 }
 
 fn niri_action_to_griddy(action: &str) -> String {
     match action {
-        "close-window"           => "close-window".into(),
-        "quit"                   => "quit".into(),
-        "toggle-fullscreen"      => "state-fullscreen-toggle".into(),
+        "close-window" => "close-window".into(),
+        "quit" => "quit".into(),
+        "toggle-fullscreen" => "state-fullscreen-toggle".into(),
         "toggle-window-floating" => "state-floating-toggle".into(),
-        "focus-column-left"      => "focus-left".into(),
-        "focus-column-right"     => "focus-right".into(),
-        "focus-window-up"        => "focus-up".into(),
-        "focus-window-down"      => "focus-down".into(),
+        "focus-column-left" => "focus-left".into(),
+        "focus-column-right" => "focus-right".into(),
+        "focus-window-up" => "focus-up".into(),
+        "focus-window-down" => "focus-down".into(),
         a if a.starts_with("spawn") => {
-            let cmd = a.strip_prefix("spawn").unwrap_or("").trim().trim_matches('"');
+            let cmd = a
+                .strip_prefix("spawn")
+                .unwrap_or("")
+                .trim()
+                .trim_matches('"');
             format!("exec {cmd}")
         }
         _ => String::new(),
