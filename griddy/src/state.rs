@@ -460,7 +460,7 @@ impl GlobalState {
         let keybind_table = if config.binds.is_empty() {
             BindTable::from_defaults(&config.input.mod_key)
         } else {
-            BindTable::from_config(&config.binds)
+            BindTable::from_config_with_mod(&config.binds, &config.input.mod_key)
         };
 
         let gesture_table = if config.gestures.is_empty() {
@@ -472,7 +472,7 @@ impl GlobalState {
         let release_table = if config.bind_releases.is_empty() {
             BindTable::default_releases(&config.input.mod_key)
         } else {
-            BindTable::from_config(&config.bind_releases)
+            BindTable::from_config_with_mod(&config.bind_releases, &config.input.mod_key)
         };
 
         // Parse pointer-constraint break key (§8.11) from config.
@@ -900,7 +900,7 @@ impl GlobalState {
                 self.keybind_table = if new_config.binds.is_empty() {
                     BindTable::from_defaults(&new_config.input.mod_key)
                 } else {
-                    BindTable::from_config(&new_config.binds)
+                    BindTable::from_config_with_mod(&new_config.binds, &new_config.input.mod_key)
                 };
                 // Rebuild gesture table.
                 self.gesture_table = if new_config.gestures.is_empty() {
@@ -912,7 +912,10 @@ impl GlobalState {
                 self.release_table = if new_config.bind_releases.is_empty() {
                     BindTable::default_releases(&new_config.input.mod_key)
                 } else {
-                    BindTable::from_config(&new_config.bind_releases)
+                    BindTable::from_config_with_mod(
+                        &new_config.bind_releases,
+                        &new_config.input.mod_key,
+                    )
                 };
                 // Rebuild submap tables.
                 self.submap_tables = crate::keybind::build_submap_tables(

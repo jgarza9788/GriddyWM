@@ -62,6 +62,23 @@ fn mouse_key_to_button(key: &str) -> Option<u32> {
 }
 
 impl BindTable {
+    /// Build a table from config [[bind]] entries, expanding `$mod` → `mod_key`
+    /// and the fixed aliases `$alt`, `$ctrl`, `$shift`.
+    pub fn from_config_with_mod(binds: &[BindConfig], mod_key: &str) -> Self {
+        let expanded: Vec<BindConfig> = binds
+            .iter()
+            .map(|b| {
+                let mods = b
+                    .mods
+                    .iter()
+                    .map(|m| expand_mod_alias(m, mod_key))
+                    .collect();
+                BindConfig { mods, ..b.clone() }
+            })
+            .collect();
+        Self::from_config(&expanded)
+    }
+
     /// Build a table from config [[bind]] entries.
     pub fn from_config(binds: &[BindConfig]) -> Self {
         let mut entries = Vec::new();
@@ -226,7 +243,6 @@ pub fn build_submap_tables(
     submaps: &[SubmapConfig],
     mod_key: &str,
 ) -> HashMap<String, SubBindTable> {
-    let _ = mod_key; // reserved for future use (built-in submaps don't depend on it)
     let mut map: HashMap<String, SubBindTable> = HashMap::new();
 
     // Insert built-in submaps first.
@@ -242,10 +258,19 @@ pub fn build_submap_tables(
             .map(|k| xkb::keysym_from_name(k, xkb::KEYSYM_NO_FLAGS).raw())
             .filter(|&s| s != 0)
             .collect();
+        // Expand $mod and other aliases in submap bind mods.
+        let expanded: Vec<crate::config::types::SubBindConfig> = cfg
+            .binds
+            .iter()
+            .map(|b| {
+                let mods = b.mods.iter().map(|m| expand_mod_alias(m, mod_key)).collect();
+                crate::config::types::SubBindConfig { mods, ..b.clone() }
+            })
+            .collect();
         map.insert(
             cfg.name.clone(),
             SubBindTable {
-                table: BindTable::from_sub_config(&cfg.binds),
+                table: BindTable::from_sub_config(&expanded),
                 exit_syms,
                 exit_on_unhandled: cfg.exit_on_unhandled,
                 exit_after_action: cfg.exit_after_action,
@@ -402,6 +427,17 @@ impl GestureTable {
 }
 
 // ─── Modifier helpers ─────────────────────────────────────────────────────────
+
+/// Expand `$mod` → `mod_key` and the fixed shorthands `$alt`, `$ctrl`, `$shift`.
+fn expand_mod_alias(m: &str, mod_key: &str) -> String {
+    match m {
+        "$mod" => mod_key.to_string(),
+        "$alt" => "Alt".to_string(),
+        "$ctrl" => "Ctrl".to_string(),
+        "$shift" => "Shift".to_string(),
+        other => other.to_string(),
+    }
+}
 
 fn mods_to_mask(mods: &ModifiersState) -> u32 {
     let mut m = 0u32;
