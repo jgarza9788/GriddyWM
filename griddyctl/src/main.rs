@@ -340,7 +340,7 @@ fn main() -> Result<()> {
                 WorkspaceCommand::ApplyTemplate { col, row } =>
                     format!("dispatch workspace-apply-template {col},{row}"),
                 WorkspaceCommand::Rename { col, row, name } =>
-                    format!("dispatch workspace-rename {col},{row} {name}"),
+                    format!("dispatch workspace-rename {col} {row} {name}"),
             };
             let resp = send_raw(&socket_path, &cmd, args.json)?;
             println!("{resp}");
@@ -579,14 +579,20 @@ fn hypr_action_to_griddy(action: &str, args: &str) -> String {
         "killactive"          => "close-window".into(),
         "exit"                => "quit".into(),
         "exec"                => format!("exec {args}"),
-        "togglefloating"      => "toggle-floating".into(),
-        "fullscreen"          => if args == "1" { "toggle-fullscreen".into() } else { "toggle-total-fullscreen".into() }
-        "pseudo"              => "toggle-floating".into(),
+        "togglefloating"      => "state-floating-toggle".into(),
+        "fullscreen"          => if args == "1" { "state-fullscreen-toggle".into() } else { "state-total-fullscreen-toggle".into() }
+        "pseudo"              => "state-floating-toggle".into(),
         "movefocus"           => {
             match args { "l" => "focus-left", "r" => "focus-right", "u" => "focus-up", "d" => "focus-down", _ => "" }.into()
         }
         "movewindow"          => {
-            match args { "l" => "move-window-left", "r" => "move-window-right", "u" => "move-window-up", "d" => "move-window-down", _ => "" }.into()
+            match args {
+                "l" => "move-window-direction left",
+                "r" => "move-window-direction right",
+                "u" => "move-window-direction up",
+                "d" => "move-window-direction down",
+                _ => "",
+            }.into()
         }
         "workspace"           => {
             if let Ok(n) = args.trim().parse::<u8>() {
@@ -711,8 +717,8 @@ fn sway_action_to_griddy(action: &str) -> String {
     match action {
         "kill"       => "close-window".into(),
         "exit"       => "quit".into(),
-        "floating toggle" => "toggle-floating".into(),
-        "fullscreen toggle" => "toggle-fullscreen".into(),
+        "floating toggle" => "state-floating-toggle".into(),
+        "fullscreen toggle" => "state-fullscreen-toggle".into(),
         a if a.starts_with("exec ") => a.to_owned(),
         a if a.starts_with("focus ") => {
             match a.strip_prefix("focus ").unwrap_or("").trim() {
@@ -726,10 +732,10 @@ fn sway_action_to_griddy(action: &str) -> String {
         a if a.starts_with("move ") => {
             let rest = a.strip_prefix("move ").unwrap_or("").trim();
             match rest {
-                "left"  => "move-window-left".into(),
-                "right" => "move-window-right".into(),
-                "up"    => "move-window-up".into(),
-                "down"  => "move-window-down".into(),
+                "left"  => "move-window-direction left".into(),
+                "right" => "move-window-direction right".into(),
+                "up"    => "move-window-direction up".into(),
+                "down"  => "move-window-direction down".into(),
                 _ => String::new(),
             }
         }
@@ -809,8 +815,8 @@ fn niri_action_to_griddy(action: &str) -> String {
     match action {
         "close-window"           => "close-window".into(),
         "quit"                   => "quit".into(),
-        "toggle-fullscreen"      => "toggle-fullscreen".into(),
-        "toggle-window-floating" => "toggle-floating".into(),
+        "toggle-fullscreen"      => "state-fullscreen-toggle".into(),
+        "toggle-window-floating" => "state-floating-toggle".into(),
         "focus-column-left"      => "focus-left".into(),
         "focus-column-right"     => "focus-right".into(),
         "focus-window-up"        => "focus-up".into(),

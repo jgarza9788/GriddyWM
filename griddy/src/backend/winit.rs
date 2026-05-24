@@ -1629,14 +1629,22 @@ fn handle_input(
             if hv != 0.0 || vv != 0.0 {
                 if let Some(kb) = state.seat.get_keyboard() {
                     let mods = kb.modifier_state();
-                    // Synthetic button codes for scroll directions (from mouse_key_to_button).
-                    let scroll_btn = if vv < 0.0 { 0x150u32 } // Scroll:Up
-                        else if vv > 0.0 { 0x151 }            // Scroll:Down
-                        else if hv < 0.0 { 0x152 }            // Scroll:Left
-                        else { 0x153 };                        // Scroll:Right
-                    if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods) {
-                        if dispatcher::dispatch(action, state) {
-                            state.should_exit = true;
+                    // Dispatch vertical bind (if any).
+                    if vv != 0.0 {
+                        let scroll_btn = if vv < 0.0 { 0x150u32 } else { 0x151 }; // Up / Down
+                        if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods) {
+                            if dispatcher::dispatch(action, state) {
+                                state.should_exit = true;
+                            }
+                        }
+                    }
+                    // Dispatch horizontal bind independently (trackpads can send both axes).
+                    if hv != 0.0 {
+                        let scroll_btn = if hv < 0.0 { 0x152u32 } else { 0x153 }; // Left / Right
+                        if let Some(action) = state.keybind_table.lookup_button(scroll_btn, &mods) {
+                            if dispatcher::dispatch(action, state) {
+                                state.should_exit = true;
+                            }
                         }
                     }
                 }

@@ -550,6 +550,10 @@ impl Grid {
     /// Compute the pixel Rect for a window given its current state/slot.
     pub fn compute_rect(&self, id: WindowId) -> Option<Rect> {
         let window = self.windows.get(&id)?;
+        // Special-workspace windows (sentinel (MAX,MAX)) have no layout position.
+        if window.workspace.0 == u8::MAX {
+            return None;
+        }
         let ws = self.ws(window.workspace.0, window.workspace.1);
         let smart = ws.should_use_smart_gaps();
 
@@ -594,9 +598,14 @@ impl Grid {
             return;
         };
 
+        let is_focused = self.focused_window == Some(id);
         window.surface.with_pending_state(|state| {
             state.size = Some((rect.w, rect.h).into());
-            state.states.set(xdg_toplevel::State::Activated);
+            if is_focused {
+                state.states.set(xdg_toplevel::State::Activated);
+            } else {
+                state.states.unset(xdg_toplevel::State::Activated);
+            }
             match window.current_state {
                 WindowState::Fullscreen | WindowState::TotalFullscreen => {
                     state.states.set(xdg_toplevel::State::Fullscreen);
@@ -761,6 +770,9 @@ impl Grid {
         if let Some(prev) = self.history.pop_front() {
             let current = self.focused;
             self.forward_history.push_front(current);
+            if self.forward_history.len() > 64 {
+                self.forward_history.pop_back();
+            }
             self.focused = prev;
             self.focused_window =
                 self.ws(prev.0, prev.1).focus_history.front().copied();
@@ -1199,16 +1211,32 @@ impl Grid {
         self.rows = new_rows;
 
         // Move windows from out-of-bounds cells into the nearest valid cell.
-        let all_ids: Vec<WindowId> = self.windows.keys().copied().collect();
-        for id in all_ids {
-            if let Some(w) = self.windows.get_mut(&id) {
+        // Collect (id, old_ws, new_ws) for windows that need relocation.
+        let relocations: Vec<(WindowId, (u8, u8), (u8, u8))> = self.windows.values()
+            .filter_map(|w| {
                 let (wc, wr) = w.workspace;
-                if wc == u8::MAX { continue; } // special workspace
-                let clamped_c = wc.min(new_cols - 1);
-                let clamped_r = wr.min(new_rows - 1);
-                if (clamped_c, clamped_r) != (wc, wr) {
-                    w.workspace = (clamped_c, clamped_r);
+                if wc == u8::MAX { return None; } // special workspace
+                let cc = wc.min(new_cols - 1);
+                let cr = wr.min(new_rows - 1);
+                if (cc, cr) != (wc, wr) { Some((w.id, (wc, wr), (cc, cr))) }
+                else { None }
+            })
+            .collect();
+        for (id, old_ws, new_ws) in relocations {
+            // Remove from old workspace tracking.
+            self.workspaces[old_ws.1 as usize][old_ws.0 as usize].remove_window(id);
+            // Add to new workspace — floating is the safest state after relocation.
+            self.workspaces[new_ws.1 as usize][new_ws.0 as usize].add_floating(id);
+            if let Some(w) = self.windows.get_mut(&id) {
+                w.workspace = new_ws;
+                w.current_state = WindowState::Floating;
+                if w.current_slot.is_none() {
+                    // Ensure the window has a valid floating geometry if it had none.
+                    if w.floating_geom.w == 0 {
+                        w.floating_geom = Rect::new(100, 100, 800, 600);
+                    }
                 }
+                w.current_slot = None;
             }
         }
 

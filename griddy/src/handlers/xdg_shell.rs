@@ -1,7 +1,7 @@
 use smithay::{
     delegate_foreign_toplevel_list, delegate_xdg_decoration, delegate_xdg_shell,
     reexports::wayland_server::protocol::wl_seat::WlSeat,
-    utils::Serial,
+    utils::{Serial, SERIAL_COUNTER},
     wayland::{
         foreign_toplevel_list::{ForeignToplevelListHandler, ForeignToplevelListState},
         shell::xdg::{
@@ -277,7 +277,7 @@ impl XdgShellHandler for GlobalState {
         // Update keyboard focus to the new window (unless the rule suppressed it or blocked).
         if self.grid.focused_window == Some(id) {
             if let Some(keyboard) = self.seat.get_keyboard() {
-                keyboard.set_focus(self, Some(surface.wl_surface().clone()), Serial::from(0u32));
+                keyboard.set_focus(self, Some(surface.wl_surface().clone()), SERIAL_COUNTER.next_serial());
             }
         }
     }
@@ -356,7 +356,7 @@ impl XdgShellHandler for GlobalState {
             self.pending_events.push(Event::WindowClosed { id });
             if let Some(keyboard) = self.seat.get_keyboard() {
                 let new_surface = self.grid.focused_surface().cloned();
-                keyboard.set_focus(self, new_surface, Serial::from(0u32));
+                keyboard.set_focus(self, new_surface, SERIAL_COUNTER.next_serial());
             }
         }
     }
