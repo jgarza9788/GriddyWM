@@ -33,6 +33,7 @@ jobs:
             libgbm-dev \
             libegl-dev \
             libgles2-mesa-dev \
+            libpixman-1-dev \
             libx11-dev \
             libx11-xcb-dev \
             libxcb-render-util0-dev \
@@ -82,6 +83,7 @@ jobs:
             libgbm-dev \
             libegl-dev \
             libgles2-mesa-dev \
+            libpixman-1-dev \
             libx11-dev \
             libx11-xcb-dev \
             libxcb-render-util0-dev \
