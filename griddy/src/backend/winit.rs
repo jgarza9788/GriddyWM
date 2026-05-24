@@ -253,7 +253,9 @@ pub fn run(
         }
 
         // Advance / expire slide animation
-        if let Some(ref anim) = state.slide_anim && anim.is_done() {
+        if let Some(ref anim) = state.slide_anim
+            && anim.is_done()
+        {
             state.slide_anim = None;
         }
 
@@ -358,7 +360,9 @@ pub fn run(
             }
             // Sticky windows not already rendered (from other workspaces).
             for w in state.grid.windows.values() {
-                if w.sticky && !seen_ids.contains(&w.id) && !w.is_swallowed
+                if w.sticky
+                    && !seen_ids.contains(&w.id)
+                    && !w.is_swallowed
                     && let Some(r) = state.grid.compute_rect(w.id)
                 {
                     let effective_rect = state
@@ -1468,7 +1472,9 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                         }
                     },
                 );
-                if let Some(Some(action)) = action && dispatcher::dispatch(action, state) {
+                if let Some(Some(action)) = action
+                    && dispatcher::dispatch(action, state)
+                {
                     state.should_exit = true;
                 }
                 // Detect XKB layout changes (e.g. Ctrl+Shift group switch).
@@ -1748,7 +1754,9 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                 update_keyboard_focus_to(state, hit);
             } else {
                 // Release: apply edge snap if pending, then clear drag
-                if let Some(ref drag) = state.drag && let Some(slot) = drag.snap_preview {
+                if let Some(ref drag) = state.drag
+                    && let Some(slot) = drag.snap_preview
+                {
                     // Ensure dragged window is focused so assign_slot targets it
                     let drag_id = drag.window_id;
                     state.grid.focused_window = Some(drag_id);
