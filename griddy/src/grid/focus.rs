@@ -58,10 +58,8 @@ fn nearest_occupied(ws: &Workspace, from_slot: Slot) -> Option<Slot> {
         .min_by(|&a, &b| {
             let ac = a.center_norm();
             let bc = b.center_norm();
-            let da =
-                (ac.0 - from.0).powi(2) + (ac.1 - from.1).powi(2);
-            let db =
-                (bc.0 - from.0).powi(2) + (bc.1 - from.1).powi(2);
+            let da = (ac.0 - from.0).powi(2) + (ac.1 - from.1).powi(2);
+            let db = (bc.0 - from.0).powi(2) + (bc.1 - from.1).powi(2);
             da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
         })
 }

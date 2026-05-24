@@ -78,10 +78,7 @@ pub fn place_new_window(ws: &Workspace) -> (InitialPlacement, Vec<DemoteAction>)
 
     // Rule 4: all non-conflicting slots are occupied — stack onto the
     // first occupied slot (default: HalfLeft or whichever is first).
-    let target = ws
-        .occupied_slots()
-        .next()
-        .unwrap_or(Slot::HalfLeft);
+    let target = ws.occupied_slots().next().unwrap_or(Slot::HalfLeft);
 
     (
         InitialPlacement {

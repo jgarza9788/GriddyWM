@@ -19,12 +19,20 @@ pub struct WindowDecoConfig {
 
 impl Default for WindowDecoConfig {
     fn default() -> Self {
-        Self { border_px: default_border_px(), rounded_px: 0, opacity: default_opacity() }
+        Self {
+            border_px: default_border_px(),
+            rounded_px: 0,
+            opacity: default_opacity(),
+        }
     }
 }
 
-fn default_border_px() -> i32 { 2 }
-fn default_opacity()   -> f32  { 1.0 }
+fn default_border_px() -> i32 {
+    2
+}
+fn default_opacity() -> f32 {
+    1.0
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WindowUnfocusedDecoConfig {
@@ -41,12 +49,21 @@ pub struct WindowUnfocusedDecoConfig {
 
 impl Default for WindowUnfocusedDecoConfig {
     fn default() -> Self {
-        Self { border_px: default_border_px(), rounded_px: 0, opacity: default_unfocused_opacity(), inactive_dim: default_inactive_dim() }
+        Self {
+            border_px: default_border_px(),
+            rounded_px: 0,
+            opacity: default_unfocused_opacity(),
+            inactive_dim: default_inactive_dim(),
+        }
     }
 }
 
-fn default_unfocused_opacity() -> f32 { 0.97 }
-fn default_inactive_dim()      -> f32 { 0.08 }
+fn default_unfocused_opacity() -> f32 {
+    0.97
+}
+fn default_inactive_dim() -> f32 {
+    0.08
+}
 
 // ─── Urgent window decoration ─────────────────────────────────────────────────
 
@@ -71,8 +88,12 @@ impl Default for WindowUrgentConfig {
     }
 }
 
-fn default_urgent_border_px() -> i32 { 3 }
-fn default_border_pulse_ms()  -> u32  { 600 }
+fn default_urgent_border_px() -> i32 {
+    3
+}
+fn default_border_pulse_ms() -> u32 {
+    600
+}
 
 // ─── Floating window decoration overrides ─────────────────────────────────────
 
@@ -93,7 +114,9 @@ impl Default for WindowFloatingConfig {
     }
 }
 
-fn default_floating_rounded_px() -> i32 { 12 }
+fn default_floating_rounded_px() -> i32 {
+    12
+}
 
 // ─── Stack depth cue config (§6.8) ───────────────────────────────────────────
 
@@ -133,11 +156,21 @@ impl Default for StackedConfig {
     }
 }
 
-fn default_depth_offset()          -> i32   { 4 }
-fn default_depth_max_layers()      -> usize { 3 }
-fn default_peek_style()            -> String { "cascade".into() }
-fn default_peek_cascade_offset_px() -> i32  { 28 }
-fn default_peek_dim_unstacked()    -> f32   { 0.75 }
+fn default_depth_offset() -> i32 {
+    4
+}
+fn default_depth_max_layers() -> usize {
+    3
+}
+fn default_peek_style() -> String {
+    "cascade".into()
+}
+fn default_peek_cascade_offset_px() -> i32 {
+    28
+}
+fn default_peek_dim_unstacked() -> f32 {
+    0.75
+}
 
 // ─── Window theme section ─────────────────────────────────────────────────────
 
@@ -184,8 +217,12 @@ impl Default for WallpaperConfig {
     }
 }
 
-fn default_wallpaper_mode() -> String { "fill".into() }
-fn default_wallpaper_bg() -> String { "#1a1b26".into() }
+fn default_wallpaper_mode() -> String {
+    "fill".into()
+}
+fn default_wallpaper_bg() -> String {
+    "#1a1b26".into()
+}
 
 // ─── Top-level ────────────────────────────────────────────────────────────────
 
@@ -258,11 +295,21 @@ impl Default for OsdConfig {
     }
 }
 
-fn default_osd_position() -> String { "top-center".into() }
-fn default_osd_margin()   -> i32   { 24 }
-fn default_osd_duration() -> u64   { 1500 }
-fn default_osd_cell_px()  -> i32   { 10 }
-fn default_osd_cell_gap() -> i32   { 3 }
+fn default_osd_position() -> String {
+    "top-center".into()
+}
+fn default_osd_margin() -> i32 {
+    24
+}
+fn default_osd_duration() -> u64 {
+    1500
+}
+fn default_osd_cell_px() -> i32 {
+    10
+}
+fn default_osd_cell_gap() -> i32 {
+    3
+}
 
 // ─── Gaps ─────────────────────────────────────────────────────────────────────
 
@@ -311,9 +358,15 @@ impl Default for WindowGapConfig {
     }
 }
 
-fn default_inner_px() -> i32 { 8 }
-fn default_outer_px() -> i32 { 12 }
-fn default_true() -> bool { true }
+fn default_inner_px() -> i32 {
+    8
+}
+fn default_outer_px() -> i32 {
+    12
+}
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WorkspaceGapConfig {
@@ -334,7 +387,9 @@ impl Default for WorkspaceGapConfig {
     }
 }
 
-fn default_overview_gap() -> i32 { 20 }
+fn default_overview_gap() -> i32 {
+    20
+}
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
@@ -367,32 +422,54 @@ pub struct ColorConfig {
 impl Default for ColorConfig {
     fn default() -> Self {
         Self {
-            accent:      default_accent(),
-            accent_dim:  default_accent_dim(),
-            fg:          default_fg(),
-            fg_dim:      default_fg_dim(),
-            bg:          default_bg(),
-            bg_alt:      default_bg_alt(),
+            accent: default_accent(),
+            accent_dim: default_accent_dim(),
+            fg: default_fg(),
+            fg_dim: default_fg_dim(),
+            bg: default_bg(),
+            bg_alt: default_bg_alt(),
             border_idle: default_border_idle(),
-            warn:        default_warn(),
-            danger:      default_danger(),
-            ok:          default_ok(),
-            shadow:      default_shadow(),
+            warn: default_warn(),
+            danger: default_danger(),
+            ok: default_ok(),
+            shadow: default_shadow(),
         }
     }
 }
 
-fn default_accent()      -> String { "#7aa2f7".into() }
-fn default_accent_dim()  -> String { "#3d59a1".into() }
-fn default_fg()          -> String { "#c0caf5".into() }
-fn default_fg_dim()      -> String { "#a9b1d6".into() }
-fn default_bg()          -> String { "#1a1b26".into() }
-fn default_bg_alt()      -> String { "#24283b".into() }
-fn default_border_idle() -> String { "#414868".into() }
-fn default_warn()        -> String { "#e0af68".into() }
-fn default_danger()      -> String { "#f7768e".into() }
-fn default_ok()          -> String { "#9ece6a".into() }
-fn default_shadow()      -> String { "#000000aa".into() }
+fn default_accent() -> String {
+    "#7aa2f7".into()
+}
+fn default_accent_dim() -> String {
+    "#3d59a1".into()
+}
+fn default_fg() -> String {
+    "#c0caf5".into()
+}
+fn default_fg_dim() -> String {
+    "#a9b1d6".into()
+}
+fn default_bg() -> String {
+    "#1a1b26".into()
+}
+fn default_bg_alt() -> String {
+    "#24283b".into()
+}
+fn default_border_idle() -> String {
+    "#414868".into()
+}
+fn default_warn() -> String {
+    "#e0af68".into()
+}
+fn default_danger() -> String {
+    "#f7768e".into()
+}
+fn default_ok() -> String {
+    "#9ece6a".into()
+}
+fn default_shadow() -> String {
+    "#000000aa".into()
+}
 
 // ─── Cursor ───────────────────────────────────────────────────────────────────
 
@@ -420,8 +497,12 @@ impl Default for CursorConfig {
     }
 }
 
-fn default_cursor_theme() -> String { "default".into() }
-fn default_cursor_size()  -> u32    { 24 }
+fn default_cursor_theme() -> String {
+    "default".into()
+}
+fn default_cursor_size() -> u32 {
+    24
+}
 
 // ─── Blur ─────────────────────────────────────────────────────────────────────
 
@@ -448,6 +529,12 @@ impl Default for BlurConfig {
     }
 }
 
-fn default_blur_passes() -> u32  { 2 }
-fn default_blur_size()   -> u32  { 8 }
-fn default_blur_noise()  -> f32  { 0.0117 }
+fn default_blur_passes() -> u32 {
+    2
+}
+fn default_blur_size() -> u32 {
+    8
+}
+fn default_blur_noise() -> f32 {
+    0.0117
+}

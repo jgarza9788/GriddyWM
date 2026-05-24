@@ -17,12 +17,11 @@
 //!   • security-context-v1  (§16)
 
 use smithay::{
-    delegate_content_type, delegate_cursor_shape, delegate_data_control,
-    delegate_fractional_scale, delegate_idle_inhibit, delegate_idle_notify,
-    delegate_keyboard_shortcuts_inhibit, delegate_pointer_constraints,
-    delegate_pointer_gestures,
-    delegate_presentation, delegate_relative_pointer, delegate_single_pixel_buffer,
-    delegate_viewporter, delegate_xdg_activation,
+    delegate_content_type, delegate_cursor_shape, delegate_data_control, delegate_fractional_scale,
+    delegate_idle_inhibit, delegate_idle_notify, delegate_keyboard_shortcuts_inhibit,
+    delegate_pointer_constraints, delegate_pointer_gestures, delegate_presentation,
+    delegate_relative_pointer, delegate_single_pixel_buffer, delegate_viewporter,
+    delegate_xdg_activation,
     input::pointer::PointerHandle,
     reexports::wayland_server::protocol::wl_surface::WlSurface,
     utils::{Logical, Point, Serial},
@@ -30,13 +29,14 @@ use smithay::{
         fractional_scale::FractionalScaleHandler,
         idle_inhibit::IdleInhibitHandler,
         idle_notify::{IdleNotifierHandler, IdleNotifierState},
-        keyboard_shortcuts_inhibit::{KeyboardShortcutsInhibitHandler, KeyboardShortcutsInhibitState},
-        pointer_constraints::{with_pointer_constraint, PointerConstraintsHandler},
+        keyboard_shortcuts_inhibit::{
+            KeyboardShortcutsInhibitHandler, KeyboardShortcutsInhibitState,
+        },
+        pointer_constraints::{PointerConstraintsHandler, with_pointer_constraint},
         selection::wlr_data_control::DataControlHandler,
         tablet_manager::TabletSeatHandler,
         xdg_activation::{
-            XdgActivationHandler, XdgActivationState, XdgActivationToken,
-            XdgActivationTokenData,
+            XdgActivationHandler, XdgActivationState, XdgActivationToken, XdgActivationTokenData,
         },
     },
 };
@@ -81,7 +81,9 @@ delegate_idle_inhibit!(GlobalState);
 
 impl IdleNotifierHandler for GlobalState {
     fn idle_notifier_state(&mut self) -> &mut IdleNotifierState<Self> {
-        self.idle_notifier_state.as_mut().expect("IdleNotifierState not initialized")
+        self.idle_notifier_state
+            .as_mut()
+            .expect("IdleNotifierState not initialized")
     }
 }
 
@@ -136,7 +138,9 @@ delegate_relative_pointer!(GlobalState);
 impl PointerConstraintsHandler for GlobalState {
     fn new_constraint(&mut self, surface: &WlSurface, pointer: &PointerHandle<Self>) {
         // Activate the constraint immediately if this surface has keyboard focus.
-        let is_focused = self.grid.focused_surface()
+        let is_focused = self
+            .grid
+            .focused_surface()
             .map(|s| s == surface)
             .unwrap_or(false);
         if is_focused {
@@ -177,7 +181,9 @@ delegate_content_type!(GlobalState);
 // ─── wlr-data-control-unstable-v1 ────────────────────────────────────────────
 
 impl DataControlHandler for GlobalState {
-    fn data_control_state(&self) -> &smithay::wayland::selection::wlr_data_control::DataControlState {
+    fn data_control_state(
+        &self,
+    ) -> &smithay::wayland::selection::wlr_data_control::DataControlState {
         &self.data_control_state
     }
 }

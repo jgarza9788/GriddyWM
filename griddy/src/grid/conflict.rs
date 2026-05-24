@@ -222,7 +222,10 @@ fn resolve_slot(
         ConflictPolicy::Swap => {
             let displaced = conflicts
                 .into_iter()
-                .filter_map(|s| ws.slot_top(s).map(|id| DisplacedWindow { id, from_slot: s }))
+                .filter_map(|s| {
+                    ws.slot_top(s)
+                        .map(|id| DisplacedWindow { id, from_slot: s })
+                })
                 .collect();
             ResolveResult {
                 placement: Placement::Tiled { slot, adapted },

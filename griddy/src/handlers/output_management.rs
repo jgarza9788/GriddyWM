@@ -11,9 +11,7 @@ use wayland_protocols_wlr::output_management::v1::server::{
     zwlr_output_manager_v1::{self, ZwlrOutputManagerV1},
     zwlr_output_mode_v1::{self, ZwlrOutputModeV1},
 };
-use wayland_server::{
-    Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New, Resource,
-};
+use wayland_server::{Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New, Resource};
 
 use crate::state::GlobalState;
 
@@ -27,7 +25,10 @@ pub struct WlrOutputManagerState {
 impl WlrOutputManagerState {
     pub fn new(dh: &DisplayHandle) -> Self {
         dh.create_global::<GlobalState, ZwlrOutputManagerV1, ()>(4, ());
-        Self { managers: Vec::new(), serial: 1 }
+        Self {
+            managers: Vec::new(),
+            serial: 1,
+        }
     }
 }
 
@@ -41,7 +42,8 @@ impl GlobalDispatch<ZwlrOutputManagerV1, ()> for GlobalState {
         data_init: &mut DataInit<'_, Self>,
     ) {
         let manager = data_init.init(resource, ());
-        let serial = state.wlr_output_manager_state
+        let serial = state
+            .wlr_output_manager_state
             .as_ref()
             .map(|s| s.serial)
             .unwrap_or(1);
@@ -53,11 +55,15 @@ impl GlobalDispatch<ZwlrOutputManagerV1, ()> for GlobalState {
 
         // Create mode object.
         if let Ok(mode) = client.create_resource::<ZwlrOutputModeV1, (), GlobalState>(
-            dh, manager.version().min(4), ()
+            dh,
+            manager.version().min(4),
+            (),
         ) {
             // Create head object.
             if let Ok(head) = client.create_resource::<ZwlrOutputHeadV1, (), GlobalState>(
-                dh, manager.version().min(4), ()
+                dh,
+                manager.version().min(4),
+                (),
             ) {
                 manager.head(&head);
                 head.name("HEADLESS-1".into());
@@ -115,7 +121,8 @@ impl Dispatch<ZwlrOutputHeadV1, ()> for GlobalState {
         _data: &(),
         _dh: &DisplayHandle,
         _data_init: &mut DataInit<'_, Self>,
-    ) {}
+    ) {
+    }
 }
 
 impl Dispatch<ZwlrOutputModeV1, ()> for GlobalState {
@@ -127,7 +134,8 @@ impl Dispatch<ZwlrOutputModeV1, ()> for GlobalState {
         _data: &(),
         _dh: &DisplayHandle,
         _data_init: &mut DataInit<'_, Self>,
-    ) {}
+    ) {
+    }
 }
 
 impl Dispatch<ZwlrOutputConfigurationV1, ()> for GlobalState {
@@ -166,5 +174,6 @@ impl Dispatch<ZwlrOutputConfigurationHeadV1, ()> for GlobalState {
         _data: &(),
         _dh: &DisplayHandle,
         _data_init: &mut DataInit<'_, Self>,
-    ) {}
+    ) {
+    }
 }

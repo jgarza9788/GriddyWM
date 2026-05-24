@@ -9,12 +9,9 @@ pub mod workspace;
 
 use std::collections::{HashMap, VecDeque};
 
-use smithay::{
-    reexports::wayland_server::backend::ObjectId,
-    wayland::shell::xdg::ToplevelSurface,
-};
-use wayland_server::Resource;
+use smithay::{reexports::wayland_server::backend::ObjectId, wayland::shell::xdg::ToplevelSurface};
 use wayland_protocols::xdg::shell::server::xdg_toplevel;
+use wayland_server::Resource;
 
 use crate::config::types::{Config, ConflictPolicy, FocusOnClosePolicy};
 use window::{Rect, Slot, Window, WindowId, WindowState};
@@ -113,7 +110,11 @@ pub struct Grid {
 /// Return value of `Grid::move_window_direction_ex` — carries skip info for IPC events (§6.7.1).
 pub enum MoveDirectionResult {
     /// Window moved; if `skipped` is true it bypassed one or more TF-protected workspaces.
-    Moved { requested: (u8, u8), actual: (u8, u8), skipped: bool },
+    Moved {
+        requested: (u8, u8),
+        actual: (u8, u8),
+        skipped: bool,
+    },
     /// Every workspace in this direction is TF-protected — move refused.
     Refused,
     /// Mover's state is always allowed (Floating / TotalFullscreen); moved directly.
@@ -239,7 +240,11 @@ impl Grid {
     /// Register a newly-mapped xdg_toplevel, run placement policy, return id + adaptation info.
     ///
     /// `hints` allows window rules to pre-empt the normal placement policy.
-    pub fn add_window(&mut self, surface: ToplevelSurface, hints: PlacementHints) -> AddWindowResult {
+    pub fn add_window(
+        &mut self,
+        surface: ToplevelSurface,
+        hints: PlacementHints,
+    ) -> AddWindowResult {
         let id = self.alloc_id();
         let surface_id = surface.wl_surface().id();
         let ws_coords = hints.workspace.unwrap_or(self.focused);
@@ -412,7 +417,11 @@ impl Grid {
             self.send_configure(wid);
         }
 
-        AddWindowResult { id, slot_adapted, state_adapted }
+        AddWindowResult {
+            id,
+            slot_adapted,
+            state_adapted,
+        }
     }
 
     /// Remove a window by its Wayland surface ID. Returns the WindowId if found.
@@ -435,8 +444,11 @@ impl Grid {
                 self.focused_window =
                     focus::focus_after_close(ws, id, closed_slot, &self.focus_on_close.clone());
             } else {
-                self.focused_window =
-                    self.ws(self.focused.0, self.focused.1).focus_history.front().copied();
+                self.focused_window = self
+                    .ws(self.focused.0, self.focused.1)
+                    .focus_history
+                    .front()
+                    .copied();
             }
         }
 
@@ -458,7 +470,9 @@ impl Grid {
     /// Move a window from its current workspace into a named special workspace.
     /// Sets `window.workspace` to the sentinel `(u8::MAX, u8::MAX)`.
     pub fn detach_window_to_special(&mut self, id: WindowId) {
-        let Some(win) = self.windows.get(&id) else { return };
+        let Some(win) = self.windows.get(&id) else {
+            return;
+        };
         let old_ws = win.workspace;
         if old_ws.0 == u8::MAX {
             return; // already in a special workspace
@@ -470,15 +484,20 @@ impl Grid {
         }
         // Restore focus to next window in the workspace.
         if self.focused_window == Some(id) {
-            self.focused_window =
-                self.ws(self.focused.0, self.focused.1).focus_history.front().copied();
+            self.focused_window = self
+                .ws(self.focused.0, self.focused.1)
+                .focus_history
+                .front()
+                .copied();
         }
     }
 
     /// Return a window from a special workspace back into `target_ws`.
     /// Applies normal placement policy.
     pub fn attach_window_from_special(&mut self, id: WindowId, target_ws: (u8, u8)) {
-        let Some(win) = self.windows.get_mut(&id) else { return };
+        let Some(win) = self.windows.get_mut(&id) else {
+            return;
+        };
         if win.workspace != (u8::MAX, u8::MAX) {
             return; // not in a special workspace
         }
@@ -510,11 +529,10 @@ impl Grid {
                 let ws = self.ws(ws_coords.0, ws_coords.1);
                 // Promote when this is the only tiled window left.
                 ws.tiled_count() == 1
-                    && ws.slot_stack(
-                        self.windows[&wid].current_slot.unwrap_or(Slot::HalfLeft),
-                    )
-                    .iter()
-                    .all(|&x| x == wid)
+                    && ws
+                        .slot_stack(self.windows[&wid].current_slot.unwrap_or(Slot::HalfLeft))
+                        .iter()
+                        .all(|&x| x == wid)
             };
 
             if can_promote {
@@ -694,8 +712,12 @@ impl Grid {
 
     // ── Workspace navigation (§5) ────────────────────────────────────────────
 
-    pub fn wrap_x(&self) -> bool { self.wrap_x }
-    pub fn wrap_y(&self) -> bool { self.wrap_y }
+    pub fn wrap_x(&self) -> bool {
+        self.wrap_x
+    }
+    pub fn wrap_y(&self) -> bool {
+        self.wrap_y
+    }
 
     pub fn navigate(&mut self, direction: FocusDirection) {
         let (col, row) = self.focused;
@@ -754,11 +776,7 @@ impl Grid {
         self.focused = coords;
         // Restore focus to the last-focused window in the new workspace.
         self.focused_window = self.ws(coords.0, coords.1).focus_history.front().copied();
-        tracing::debug!(
-            col = coords.0,
-            row = coords.1,
-            "Switched workspace"
-        );
+        tracing::debug!(col = coords.0, row = coords.1, "Switched workspace");
     }
 
     pub fn workspace_back(&mut self) {
@@ -782,8 +800,7 @@ impl Grid {
                 self.history.pop_back();
             }
             self.focused = next;
-            self.focused_window =
-                self.ws(next.0, next.1).focus_history.front().copied();
+            self.focused_window = self.ws(next.0, next.1).focus_history.front().copied();
         }
     }
 
@@ -828,9 +845,14 @@ impl Grid {
 
     /// Toggle the focused window between Fullscreen and Tiled (§6.3).
     pub fn toggle_fullscreen(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, current_state, current_slot) = (w.workspace, w.current_state, w.current_slot);
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, current_state, current_slot) =
+            (w.workspace, w.current_state, w.current_slot);
 
         match current_state {
             WindowState::Fullscreen => {
@@ -843,7 +865,7 @@ impl Grid {
                 }
                 if let Some(w) = self.windows.get_mut(&id) {
                     w.current_state = WindowState::Tiled;
-                    w.current_slot  = Some(slot);
+                    w.current_slot = Some(slot);
                     w.requested_state = WindowState::Tiled;
                 }
             }
@@ -866,7 +888,7 @@ impl Grid {
                     ws.fullscreen_stack.insert(0, id);
                 }
                 if let Some(w) = self.windows.get_mut(&id) {
-                    w.current_state   = WindowState::Fullscreen;
+                    w.current_state = WindowState::Fullscreen;
                     w.requested_state = WindowState::Fullscreen;
                 }
             }
@@ -876,9 +898,14 @@ impl Grid {
 
     /// Toggle the focused window between TotalFullscreen and Tiled (§6.3).
     pub fn toggle_total_fullscreen(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, current_state, current_slot) = (w.workspace, w.current_state, w.current_slot);
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, current_state, current_slot) =
+            (w.workspace, w.current_state, w.current_slot);
 
         match current_state {
             WindowState::TotalFullscreen => {
@@ -890,8 +917,8 @@ impl Grid {
                     ws.push_to_slot_top(slot, id);
                 }
                 if let Some(w) = self.windows.get_mut(&id) {
-                    w.current_state   = WindowState::Tiled;
-                    w.current_slot    = Some(slot);
+                    w.current_state = WindowState::Tiled;
+                    w.current_slot = Some(slot);
                     w.requested_state = WindowState::Tiled;
                 }
             }
@@ -903,7 +930,7 @@ impl Grid {
                     ws.total_fullscreen_stack.insert(0, id);
                 }
                 if let Some(w) = self.windows.get_mut(&id) {
-                    w.current_state   = WindowState::TotalFullscreen;
+                    w.current_state = WindowState::TotalFullscreen;
                     w.requested_state = WindowState::TotalFullscreen;
                 }
             }
@@ -913,8 +940,12 @@ impl Grid {
 
     /// Toggle the focused window between Floating and Tiled (§6.3).
     pub fn toggle_floating(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
         let (ws_coords, current_state) = (w.workspace, w.current_state);
 
         match current_state {
@@ -927,8 +958,8 @@ impl Grid {
                     ws.push_to_slot_top(slot, id);
                 }
                 if let Some(w) = self.windows.get_mut(&id) {
-                    w.current_state   = WindowState::Tiled;
-                    w.current_slot    = Some(slot);
+                    w.current_state = WindowState::Tiled;
+                    w.current_slot = Some(slot);
                     w.requested_state = WindowState::Tiled;
                 }
             }
@@ -940,8 +971,8 @@ impl Grid {
                     ws.add_floating(id);
                 }
                 if let Some(w) = self.windows.get_mut(&id) {
-                    w.current_state   = WindowState::Floating;
-                    w.current_slot    = None;
+                    w.current_state = WindowState::Floating;
+                    w.current_slot = None;
                     w.requested_state = WindowState::Floating;
                 }
             }
@@ -953,7 +984,9 @@ impl Grid {
 
     /// Move the focused window into `slot`, running conflict resolution (§6.5).
     pub fn assign_slot(&mut self, slot: Slot) {
-        let Some(id) = self.focused_window else { return };
+        let Some(id) = self.focused_window else {
+            return;
+        };
         let ws_coords = match self.windows.get(&id) {
             Some(w) => w.workspace,
             None => return,
@@ -967,34 +1000,53 @@ impl Grid {
         let slot_adaptation = self.slot_adaptation;
         let resolved = {
             let ws = self.ws(ws_coords.0, ws_coords.1);
-            conflict::resolve(ws, WindowState::Tiled, Some(slot), None, &policy, slot_adaptation, false)
+            conflict::resolve(
+                ws,
+                WindowState::Tiled,
+                Some(slot),
+                None,
+                &policy,
+                slot_adaptation,
+                false,
+            )
         };
 
         // Displace any kicked-out windows to floating.
-        let displaced: Vec<_> = resolved.displaced.iter().map(|d| (d.id, d.from_slot)).collect();
+        let displaced: Vec<_> = resolved
+            .displaced
+            .iter()
+            .map(|d| (d.id, d.from_slot))
+            .collect();
         for (disp_id, from_slot) in displaced {
             {
                 let ws = self.ws_mut(ws_coords.0, ws_coords.1);
-                ws.slots.entry(from_slot).or_default().retain(|&x| x != disp_id);
+                ws.slots
+                    .entry(from_slot)
+                    .or_default()
+                    .retain(|&x| x != disp_id);
                 ws.add_floating(disp_id);
             }
             if let Some(w) = self.windows.get_mut(&disp_id) {
                 w.current_state = WindowState::Floating;
-                w.current_slot  = None;
+                w.current_slot = None;
             }
             self.send_configure(disp_id);
         }
 
         let (final_state, final_slot) = match &resolved.placement {
             conflict::Placement::Tiled { slot: s, .. } => (WindowState::Tiled, Some(*s)),
-            conflict::Placement::Floating              => (WindowState::Floating, None),
-            conflict::Placement::FullscreenPromotion   => (WindowState::Fullscreen, None),
+            conflict::Placement::Floating => (WindowState::Floating, None),
+            conflict::Placement::FullscreenPromotion => (WindowState::Fullscreen, None),
         };
 
         {
             let ws = self.ws_mut(ws_coords.0, ws_coords.1);
             match final_state {
-                WindowState::Tiled => if let Some(s) = final_slot { ws.push_to_slot_top(s, id); },
+                WindowState::Tiled => {
+                    if let Some(s) = final_slot {
+                        ws.push_to_slot_top(s, id);
+                    }
+                }
                 WindowState::Floating => ws.add_floating(id),
                 WindowState::Fullscreen => ws.fullscreen_stack.insert(0, id),
                 WindowState::TotalFullscreen => ws.total_fullscreen_stack.insert(0, id),
@@ -1002,10 +1054,10 @@ impl Grid {
         }
 
         if let Some(w) = self.windows.get_mut(&id) {
-            w.current_state   = final_state;
+            w.current_state = final_state;
             w.requested_state = WindowState::Tiled;
-            w.requested_slot  = Some(slot);
-            w.current_slot    = final_slot;
+            w.requested_slot = Some(slot);
+            w.current_slot = final_slot;
         }
         self.focused_window = Some(id);
         self.send_configure(id);
@@ -1015,14 +1067,26 @@ impl Grid {
 
     /// Jump directly to stack index `n` (0 = top). No-op if out of bounds.
     pub fn stack_flip(&mut self, n: u32) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, slot) = (
+            w.workspace,
+            match w.current_slot {
+                Some(s) => s,
+                None => return,
+            },
+        );
 
         let new_top = {
             let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
             let n = n as usize;
-            if n >= stack.len() { return; }
+            if n >= stack.len() {
+                return;
+            }
             let target = stack.remove(n);
             stack.insert(0, target);
             stack[0]
@@ -1033,13 +1097,25 @@ impl Grid {
 
     /// Rotate the focused slot's stack: make the next window the top (visible).
     pub fn stack_next(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, slot) = (
+            w.workspace,
+            match w.current_slot {
+                Some(s) => s,
+                None => return,
+            },
+        );
 
         let new_top = {
             let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-            if stack.len() < 2 { return; }
+            if stack.len() < 2 {
+                return;
+            }
             let first = stack.remove(0);
             stack.push(first);
             stack[0]
@@ -1050,13 +1126,25 @@ impl Grid {
 
     /// Rotate the focused slot's stack: make the previous window the top.
     pub fn stack_prev(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, slot) = (
+            w.workspace,
+            match w.current_slot {
+                Some(s) => s,
+                None => return,
+            },
+        );
 
         let new_top = {
             let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-            if stack.len() < 2 { return; }
+            if stack.len() < 2 {
+                return;
+            }
             let last = stack.pop().unwrap();
             stack.insert(0, last);
             stack[0]
@@ -1069,9 +1157,19 @@ impl Grid {
     /// No-op when the window is already the top (which is the invariant maintained
     /// by `stack_next`/`stack_prev`), but useful for future non-cycling focus modes.
     pub fn stack_promote(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, slot) = (
+            w.workspace,
+            match w.current_slot {
+                Some(s) => s,
+                None => return,
+            },
+        );
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
         if let Some(pos) = stack.iter().position(|&x| x == id) && pos > 0 {
             stack.remove(pos);
@@ -1083,11 +1181,23 @@ impl Grid {
 
     /// Eject the focused window from its tiled slot into the Floating layer.
     pub fn stack_collapse(&mut self) {
-        let Some(id) = self.focused_window else { return };
+        let Some(id) = self.focused_window else {
+            return;
+        };
         let (ws_coords, slot) = {
-            let Some(w) = self.windows.get(&id) else { return };
-            if w.current_state != WindowState::Tiled { return; }
-            (w.workspace, match w.current_slot { Some(s) => s, None => return })
+            let Some(w) = self.windows.get(&id) else {
+                return;
+            };
+            if w.current_state != WindowState::Tiled {
+                return;
+            }
+            (
+                w.workspace,
+                match w.current_slot {
+                    Some(s) => s,
+                    None => return,
+                },
+            )
         };
         // Remove from slot stack.
         {
@@ -1101,7 +1211,12 @@ impl Grid {
         if let Some(w) = self.windows.get_mut(&id) {
             let fw = w.floating_geom.w.max(400);
             let fh = w.floating_geom.h.max(300);
-            w.floating_geom = Rect { x: (ow - fw) / 2, y: (oh - fh) / 2, w: fw, h: fh };
+            w.floating_geom = Rect {
+                x: (ow - fw) / 2,
+                y: (oh - fh) / 2,
+                w: fw,
+                h: fh,
+            };
             w.current_state = WindowState::Floating;
             w.current_slot = None;
         }
@@ -1111,9 +1226,19 @@ impl Grid {
 
     /// Move the focused window one position toward index 0 in its slot's stack.
     pub fn stack_move_up(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, slot) = (
+            w.workspace,
+            match w.current_slot {
+                Some(s) => s,
+                None => return,
+            },
+        );
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
         if let Some(pos) = stack.iter().position(|&x| x == id) && pos > 0 {
             stack.swap(pos, pos - 1);
@@ -1125,9 +1250,19 @@ impl Grid {
     /// Move the focused window one position toward the end of its slot's stack.
     /// The window below it becomes the new visible (index 0) window.
     pub fn stack_move_down(&mut self) {
-        let Some(id) = self.focused_window else { return };
-        let Some(w) = self.windows.get(&id) else { return };
-        let (ws_coords, slot) = (w.workspace, match w.current_slot { Some(s) => s, None => return });
+        let Some(id) = self.focused_window else {
+            return;
+        };
+        let Some(w) = self.windows.get(&id) else {
+            return;
+        };
+        let (ws_coords, slot) = (
+            w.workspace,
+            match w.current_slot {
+                Some(s) => s,
+                None => return,
+            },
+        );
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
         if let Some(pos) = stack.iter().position(|&x| x == id) && pos + 1 < stack.len() {
             stack.swap(pos, pos + 1);
@@ -1156,14 +1291,26 @@ impl Grid {
 
     /// Return the number of windows in the given slot stack on workspace `ws`.
     pub fn slot_stack_size(&self, ws: (u8, u8), slot: Slot) -> usize {
-        if ws.0 >= self.cols || ws.1 >= self.rows { return 0; }
-        self.ws(ws.0, ws.1).slots.get(&slot).map(|s| s.len()).unwrap_or(0)
+        if ws.0 >= self.cols || ws.1 >= self.rows {
+            return 0;
+        }
+        self.ws(ws.0, ws.1)
+            .slots
+            .get(&slot)
+            .map(|s| s.len())
+            .unwrap_or(0)
     }
 
     /// Return all window IDs in the slot stack (index 0 = top/visible) for IPC reorder events.
     pub fn slot_stack_ids(&self, ws: (u8, u8), slot: Slot) -> Vec<WindowId> {
-        if ws.0 >= self.cols || ws.1 >= self.rows { return vec![]; }
-        self.ws(ws.0, ws.1).slots.get(&slot).cloned().unwrap_or_default()
+        if ws.0 >= self.cols || ws.1 >= self.rows {
+            return vec![];
+        }
+        self.ws(ws.0, ws.1)
+            .slots
+            .get(&slot)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Resize the workspace grid to `new_cols` × `new_rows`.
@@ -1239,8 +1386,13 @@ impl Grid {
 
     /// Returns true if the workspace at `coords` has an active TotalFullscreen window (§6.7.1).
     pub fn workspace_has_total_fullscreen(&self, coords: (u8, u8)) -> bool {
-        if coords.0 >= self.cols || coords.1 >= self.rows { return false; }
-        !self.ws(coords.0, coords.1).total_fullscreen_stack.is_empty()
+        if coords.0 >= self.cols || coords.1 >= self.rows {
+            return false;
+        }
+        !self
+            .ws(coords.0, coords.1)
+            .total_fullscreen_stack
+            .is_empty()
     }
 
     /// Move the focused window one step in `direction`, skipping TotalFullscreen-protected
@@ -1259,25 +1411,41 @@ impl Grid {
 
         let step_fn = |col: u8, row: u8| -> Option<(u8, u8)> {
             match direction {
-                FocusDirection::Left  => {
-                    if col > 0 { Some((col - 1, row)) }
-                    else if self.wrap_x { Some((self.cols - 1, row)) }
-                    else { None }
+                FocusDirection::Left => {
+                    if col > 0 {
+                        Some((col - 1, row))
+                    } else if self.wrap_x {
+                        Some((self.cols - 1, row))
+                    } else {
+                        None
+                    }
                 }
                 FocusDirection::Right => {
-                    if col + 1 < self.cols { Some((col + 1, row)) }
-                    else if self.wrap_x { Some((0, row)) }
-                    else { None }
+                    if col + 1 < self.cols {
+                        Some((col + 1, row))
+                    } else if self.wrap_x {
+                        Some((0, row))
+                    } else {
+                        None
+                    }
                 }
                 FocusDirection::Up => {
-                    if row > 0 { Some((col, row - 1)) }
-                    else if self.wrap_y { Some((col, self.rows - 1)) }
-                    else { None }
+                    if row > 0 {
+                        Some((col, row - 1))
+                    } else if self.wrap_y {
+                        Some((col, self.rows - 1))
+                    } else {
+                        None
+                    }
                 }
                 FocusDirection::Down => {
-                    if row + 1 < self.rows { Some((col, row + 1)) }
-                    else if self.wrap_y { Some((col, 0)) }
-                    else { None }
+                    if row + 1 < self.rows {
+                        Some((col, row + 1))
+                    } else if self.wrap_y {
+                        Some((col, 0))
+                    } else {
+                        None
+                    }
                 }
             }
         };
@@ -1287,7 +1455,9 @@ impl Grid {
         if !tf_protected || !self.workspace_has_total_fullscreen(first_target) {
             // Fast path: no TF protection issue.
             self.move_window_to(first_target);
-            return Some(MoveDirectionResult::MovedDirect { target: first_target });
+            return Some(MoveDirectionResult::MovedDirect {
+                target: first_target,
+            });
         }
 
         // Walk past protected workspaces.
@@ -1317,16 +1487,22 @@ impl Grid {
 
     /// Move the focused window to a specific workspace cell.
     pub fn move_window_to(&mut self, target: (u8, u8)) {
-        let Some(id) = self.focused_window else { return };
+        let Some(id) = self.focused_window else {
+            return;
+        };
         let ws_coords = match self.windows.get(&id) {
             Some(w) => w.workspace,
             None => return,
         };
-        if ws_coords == target { return; }
-        if target.0 >= self.cols || target.1 >= self.rows { return; }
+        if ws_coords == target {
+            return;
+        }
+        if target.0 >= self.cols || target.1 >= self.rows {
+            return;
+        }
 
         let current_state = self.windows[&id].current_state;
-        let current_slot  = self.windows[&id].current_slot;
+        let current_slot = self.windows[&id].current_slot;
 
         // Detach from source workspace.
         self.detach_from_stacks(id, ws_coords);
@@ -1341,26 +1517,38 @@ impl Grid {
         let fullscreen_adaptation = self.fullscreen_adaptation;
         let resolved = {
             let ws = self.ws(target.0, target.1);
-            conflict::resolve(ws, current_state, current_slot, None, &policy, slot_adaptation, fullscreen_adaptation)
+            conflict::resolve(
+                ws,
+                current_state,
+                current_slot,
+                None,
+                &policy,
+                slot_adaptation,
+                fullscreen_adaptation,
+            )
         };
 
         let (final_state, final_slot) = match &resolved.placement {
             conflict::Placement::Tiled { slot, .. } => (WindowState::Tiled, Some(*slot)),
             conflict::Placement::FullscreenPromotion => (WindowState::Fullscreen, None),
-            conflict::Placement::Floating            => (WindowState::Floating, None),
+            conflict::Placement::Floating => (WindowState::Floating, None),
         };
         {
             let ws = self.ws_mut(target.0, target.1);
             match final_state {
-                WindowState::Tiled           => if let Some(s) = final_slot { ws.push_to_slot_top(s, id); },
-                WindowState::Fullscreen      => ws.fullscreen_stack.insert(0, id),
+                WindowState::Tiled => {
+                    if let Some(s) = final_slot {
+                        ws.push_to_slot_top(s, id);
+                    }
+                }
+                WindowState::Fullscreen => ws.fullscreen_stack.insert(0, id),
                 WindowState::TotalFullscreen => ws.total_fullscreen_stack.insert(0, id),
-                WindowState::Floating        => ws.add_floating(id),
+                WindowState::Floating => ws.add_floating(id),
             }
         }
         if let Some(w) = self.windows.get_mut(&id) {
             w.current_state = final_state;
-            w.current_slot  = final_slot;
+            w.current_slot = final_slot;
         }
         self.send_configure(id);
     }
@@ -1375,9 +1563,7 @@ impl Grid {
     /// dimensions.  Returns `true` if the conversion was performed.
     pub fn force_min_size_float(&mut self, id: WindowId, min_w: i32, min_h: i32) -> bool {
         let (ws_coords, current_slot) = match self.windows.get(&id) {
-            Some(w) if w.current_state == WindowState::Tiled => {
-                (w.workspace, w.current_slot)
-            }
+            Some(w) if w.current_state == WindowState::Tiled => (w.workspace, w.current_slot),
             _ => return false,
         };
 
@@ -1387,7 +1573,7 @@ impl Grid {
         };
 
         let too_narrow = min_w > 0 && slot_rect.w < min_w;
-        let too_short  = min_h > 0 && slot_rect.h < min_h;
+        let too_short = min_h > 0 && slot_rect.h < min_h;
         if !too_narrow && !too_short {
             return false;
         }
@@ -1403,18 +1589,29 @@ impl Grid {
         self.ws_mut(ws_coords.0, ws_coords.1).add_floating(id);
 
         if let Some(w) = self.windows.get_mut(&id) {
-            w.current_state   = WindowState::Floating;
-            w.current_slot    = None;
+            w.current_state = WindowState::Floating;
+            w.current_slot = None;
             // Keep requested_slot so restoring later is possible.
             if w.requested_slot.is_none() {
                 w.requested_slot = current_slot;
             }
-            w.floating_geom = Rect { x: float_x, y: float_y, w: float_w, h: float_h };
+            w.floating_geom = Rect {
+                x: float_x,
+                y: float_y,
+                w: float_w,
+                h: float_h,
+            };
         }
 
         self.send_configure(id);
-        tracing::debug!(id, min_w, min_h, slot_w = slot_rect.w, slot_h = slot_rect.h,
-            "min_size overflow: window forced to floating");
+        tracing::debug!(
+            id,
+            min_w,
+            min_h,
+            slot_w = slot_rect.w,
+            slot_h = slot_rect.h,
+            "min_size overflow: window forced to floating"
+        );
         true
     }
 
@@ -1498,7 +1695,11 @@ mod tests {
         let mut g = make_grid(3, 3);
         g.focused = (0, 0);
         g.navigate(FocusDirection::Left);
-        assert_eq!(g.focused, (0, 0), "should not move left past col=0 without wrap");
+        assert_eq!(
+            g.focused,
+            (0, 0),
+            "should not move left past col=0 without wrap"
+        );
     }
 
     #[test]
@@ -1530,7 +1731,11 @@ mod tests {
         let mut g = make_grid(3, 3);
         g.focused = (1, 1);
         g.resize_grid(4, 4);
-        assert_eq!(g.focused, (1, 1), "focus should be preserved when still in bounds");
+        assert_eq!(
+            g.focused,
+            (1, 1),
+            "focus should be preserved when still in bounds"
+        );
     }
 
     #[test]
@@ -1538,6 +1743,10 @@ mod tests {
         let mut g = make_grid(3, 3);
         g.focused = (2, 0);
         g.navigate(FocusDirection::Right);
-        assert_eq!(g.focused, (2, 0), "should not move right past last column without wrap");
+        assert_eq!(
+            g.focused,
+            (2, 0),
+            "should not move right past last column without wrap"
+        );
     }
 }

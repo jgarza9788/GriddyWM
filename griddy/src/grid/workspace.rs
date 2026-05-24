@@ -87,9 +87,10 @@ impl Workspace {
 
     /// Occupied slots (those with at least one window).
     pub fn occupied_slots(&self) -> impl Iterator<Item = Slot> + '_ {
-        Slot::ALL.iter().copied().filter(|&s| {
-            self.slots.get(&s).map(|v| !v.is_empty()).unwrap_or(false)
-        })
+        Slot::ALL
+            .iter()
+            .copied()
+            .filter(|&s| self.slots.get(&s).map(|v| !v.is_empty()).unwrap_or(false))
     }
 
     // ── Mutations ────────────────────────────────────────────────────────────

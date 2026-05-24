@@ -66,10 +66,14 @@ pub fn total_fullscreen_rect(output_w: i32, output_h: i32) -> Rect {
 /// `gap_px` is the gap between thumbnails; `margin_px` is the outer margin.
 #[allow(clippy::too_many_arguments)]
 pub fn overview_thumbnail_rect(
-    col: u8, row: u8,
-    cols: u8, rows: u8,
-    screen_w: i32, screen_h: i32,
-    gap_px: i32, margin_px: i32,
+    col: u8,
+    row: u8,
+    cols: u8,
+    rows: u8,
+    screen_w: i32,
+    screen_h: i32,
+    gap_px: i32,
+    margin_px: i32,
 ) -> Rect {
     let cols = cols.max(1) as i32;
     let rows = rows.max(1) as i32;
@@ -86,9 +90,12 @@ pub fn overview_thumbnail_rect(
 ///
 /// `anchor_x/y` is the top-left of the entire minimap widget.
 pub fn minimap_cell_rect(
-    col: u8, row: u8,
-    cell_px: i32, gap_px: i32,
-    anchor_x: i32, anchor_y: i32,
+    col: u8,
+    row: u8,
+    cell_px: i32,
+    gap_px: i32,
+    anchor_x: i32,
+    anchor_y: i32,
 ) -> Rect {
     let tx = anchor_x + col as i32 * (cell_px + gap_px);
     let ty = anchor_y + row as i32 * (cell_px + gap_px);
@@ -116,7 +123,7 @@ mod tests {
 
     #[test]
     fn half_left_plus_half_right_covers_usable_width() {
-        let left  = slot_rect(Slot::HalfLeft,  W, H, INNER, OUTER, false);
+        let left = slot_rect(Slot::HalfLeft, W, H, INNER, OUTER, false);
         let right = slot_rect(Slot::HalfRight, W, H, INNER, OUTER, false);
         let usable_w = W - 2 * OUTER;
         assert_eq!(left.w + right.w + INNER, usable_w);

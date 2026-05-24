@@ -59,30 +59,20 @@ mod inner {
         pub on_unload: Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
 
         /// Called at the beginning of every compositor frame, before rendering.
-        pub on_frame_begin:
-            Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
+        pub on_frame_begin: Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
         /// Called at the end of every compositor frame, after submit.
-        pub on_frame_end:
-            Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
+        pub on_frame_end: Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
         /// Called just before the GLES frame is opened.
-        pub on_pre_render:
-            Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
+        pub on_pre_render: Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
         /// Called just after the GLES frame is finished (before submit).
-        pub on_post_render:
-            Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
+        pub on_post_render: Option<unsafe extern "C" fn(handle: *mut GriddyPluginHandle)>,
         /// Called when a new window is about to be placed in the grid.
         pub on_window_pre_open: Option<
-            unsafe extern "C" fn(
-                handle: *mut GriddyPluginHandle,
-                info: *const GriddyWindowInfo,
-            ),
+            unsafe extern "C" fn(handle: *mut GriddyPluginHandle, info: *const GriddyWindowInfo),
         >,
         /// Called after a window has been fully removed from the grid.
         pub on_window_post_close: Option<
-            unsafe extern "C" fn(
-                handle: *mut GriddyPluginHandle,
-                info: *const GriddyWindowInfo,
-            ),
+            unsafe extern "C" fn(handle: *mut GriddyPluginHandle, info: *const GriddyWindowInfo),
         >,
     }
 
@@ -189,8 +179,7 @@ mod inner {
             }
         }
 
-        let meta = std::fs::metadata(p)
-            .map_err(|e| format!("Cannot stat plugin '{path}': {e}"))?;
+        let meta = std::fs::metadata(p).map_err(|e| format!("Cannot stat plugin '{path}': {e}"))?;
 
         let mode = meta.mode();
         if mode & 0o002 != 0 {
@@ -199,7 +188,9 @@ mod inner {
             ));
         }
         if mode & 0o020 != 0 {
-            tracing::warn!("Plugin '{path}' is group-writable (mode {mode:04o}); proceed with caution");
+            tracing::warn!(
+                "Plugin '{path}' is group-writable (mode {mode:04o}); proceed with caution"
+            );
         }
 
         Ok(())
@@ -230,7 +221,10 @@ mod inner {
         };
 
         if descriptor.is_null() {
-            return Err(format!("griddy_plugin_init() returned NULL in '{}'", cfg.path));
+            return Err(format!(
+                "griddy_plugin_init() returned NULL in '{}'",
+                cfg.path
+            ));
         }
 
         let abi = unsafe { (*descriptor).abi_version };
@@ -258,8 +252,7 @@ mod inner {
         };
 
         if let Some(f) = unsafe { (*descriptor).on_load } {
-            let config_cstr =
-                CString::new(cfg.config.as_bytes()).unwrap_or_default();
+            let config_cstr = CString::new(cfg.config.as_bytes()).unwrap_or_default();
             let rc = unsafe { f(&mut plugin.handle, config_cstr.as_ptr()) };
             if rc != 0 {
                 return Err(format!(
@@ -310,8 +303,8 @@ mod inner {
 #[cfg(feature = "plugin-abi")]
 #[allow(unused_imports)]
 pub use inner::{
-    load_plugin, load_plugins_file, GriddyWindowInfo, LoadedPlugin, PluginConfig,
-    GRIDDY_PLUGIN_ABI_VERSION,
+    GRIDDY_PLUGIN_ABI_VERSION, GriddyWindowInfo, LoadedPlugin, PluginConfig, load_plugin,
+    load_plugins_file,
 };
 
 // When the feature is disabled, provide no-op stubs so call sites compile
@@ -322,7 +315,9 @@ mod stubs {
 
     pub struct LoadedPlugin;
     impl LoadedPlugin {
-        pub fn name(&self) -> &str { "" }
+        pub fn name(&self) -> &str {
+            ""
+        }
         pub fn call_frame_begin(&mut self) {}
         pub fn call_frame_end(&mut self) {}
         pub fn call_pre_render(&mut self) {}
@@ -332,10 +327,15 @@ mod stubs {
     }
 
     pub struct GriddyWindowInfo {
-        pub id: u32, pub app_id: *const i8, pub title: *const i8,
-        pub x: i32, pub y: i32, pub w: i32, pub h: i32,
+        pub id: u32,
+        pub app_id: *const i8,
+        pub title: *const i8,
+        pub x: i32,
+        pub y: i32,
+        pub w: i32,
+        pub h: i32,
     }
 }
 
 #[cfg(not(feature = "plugin-abi"))]
-pub use stubs::{GriddyWindowInfo, LoadedPlugin, GRIDDY_PLUGIN_ABI_VERSION};
+pub use stubs::{GRIDDY_PLUGIN_ABI_VERSION, GriddyWindowInfo, LoadedPlugin};

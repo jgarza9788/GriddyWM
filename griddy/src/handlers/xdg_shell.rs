@@ -5,8 +5,8 @@ use smithay::{
     wayland::{
         foreign_toplevel_list::{ForeignToplevelListHandler, ForeignToplevelListState},
         shell::xdg::{
-            decoration::XdgDecorationHandler,
             PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler, XdgShellState,
+            decoration::XdgDecorationHandler,
         },
     },
 };
@@ -16,8 +16,8 @@ use wayland_server::Resource;
 
 use crate::animate::WindowAnim;
 use crate::grid::{
-    window::{Rect, Slot, WindowState},
     AddWindowResult, PlacementHints,
+    window::{Rect, Slot, WindowState},
 };
 use crate::ipc::{commands as ipc_cmds, events::Event};
 use crate::state::GlobalState;
@@ -30,8 +30,8 @@ impl XdgShellHandler for GlobalState {
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         // Read the app_id/title and parent surface from the pending xdg state.
         let (app_id, title, parent_surface) = {
-            use smithay::wayland::shell::xdg::XdgToplevelSurfaceRoleAttributes;
             use smithay::wayland::compositor::with_states;
+            use smithay::wayland::shell::xdg::XdgToplevelSurfaceRoleAttributes;
             with_states(surface.wl_surface(), |states| {
                 let attrs = states
                     .data_map
@@ -45,24 +45,39 @@ impl XdgShellHandler for GlobalState {
                     .as_ref()
                     .and_then(|a| a.title.clone())
                     .unwrap_or_default();
-                let parent = attrs
-                    .as_ref()
-                    .and_then(|a| a.parent.clone());
+                let parent = attrs.as_ref().and_then(|a| a.parent.clone());
                 (app_id, title, parent)
             })
         };
 
         // Evaluate window rules (§10). Last-wins cascade.
-        let mut hints = evaluate_rules(&self.config.rules, &app_id, &title, false, Some(self.grid.focused), false);
+        let mut hints = evaluate_rules(
+            &self.config.rules,
+            &app_id,
+            &title,
+            false,
+            Some(self.grid.focused),
+            false,
+        );
 
         // Apply any pending spawn-hint (from spawn-floating / spawn-in-slot /
         // spawn-on-workspace / spawn-stacked dispatchers). Spawn hint wins.
         if let Some(sh) = self.spawn_hint.take() {
-            if sh.state.is_some()         { hints.state         = sh.state; }
-            if sh.slot.is_some()          { hints.slot          = sh.slot; }
-            if sh.workspace.is_some()     { hints.workspace     = sh.workspace; }
-            if sh.floating_geom.is_some() { hints.floating_geom = sh.floating_geom; }
-            if sh.no_focus                { hints.no_focus      = true; }
+            if sh.state.is_some() {
+                hints.state = sh.state;
+            }
+            if sh.slot.is_some() {
+                hints.slot = sh.slot;
+            }
+            if sh.workspace.is_some() {
+                hints.workspace = sh.workspace;
+            }
+            if sh.floating_geom.is_some() {
+                hints.floating_geom = sh.floating_geom;
+            }
+            if sh.no_focus {
+                hints.no_focus = true;
+            }
         }
 
         // §6.9 Transient dialogs: if xdg_toplevel.set_parent is set, float centered on parent.
@@ -95,7 +110,8 @@ impl XdgShellHandler for GlobalState {
                 hints.slot = parse_slot(slot_name);
             }
             tracing::debug!(
-                app_id, workspace_col = entry.workspace_col,
+                app_id,
+                workspace_col = entry.workspace_col,
                 workspace_row = entry.workspace_row,
                 "Session restore applied"
             );
@@ -107,7 +123,10 @@ impl XdgShellHandler for GlobalState {
         if hints.state.is_none() && hints.slot.is_none() && hints.workspace.is_none() {
             let same_app_policy = &self.config.windows.new_window.same_app;
             let focused_ws = self.grid.focused;
-            let existing_slot = self.grid.windows.values()
+            let existing_slot = self
+                .grid
+                .windows
+                .values()
                 .filter(|w| w.workspace == focused_ws && w.app_id == app_id)
                 .filter_map(|w| w.current_slot)
                 .next();
@@ -126,14 +145,18 @@ impl XdgShellHandler for GlobalState {
         }
 
         // §22.4 Window swallowing: get client PID, store it, then check swallow rules.
-        let client_pid: Option<u32> = surface.wl_surface()
+        let client_pid: Option<u32> = surface
+            .wl_surface()
             .client()
             .and_then(|c| c.get_credentials(&self.display_handle).ok())
             .map(|cred| cred.pid as u32);
         hints.pid = client_pid;
 
         // Check if any rule for this window has a `swallow` pattern.
-        let swallow_pat = self.config.rules.iter()
+        let swallow_pat = self
+            .config
+            .rules
+            .iter()
             .filter(|r| r.matches(&app_id, &title, false, None, false))
             .find_map(|r| r.action.swallow.clone());
 
@@ -141,7 +164,10 @@ impl XdgShellHandler for GlobalState {
             // Find the parent PID of the new window.
             if let Some(ppid) = read_ppid(new_pid) {
                 // Find an existing window owned by the ppid whose app_id matches pat.
-                let swallow_candidate = self.grid.windows.values()
+                let swallow_candidate = self
+                    .grid
+                    .windows
+                    .values()
                     .find(|w| {
                         w.pid.map(|p| p == ppid).unwrap_or(false)
                             && crate::config::rules::glob_match_pub(&pat, &w.app_id)
@@ -149,18 +175,17 @@ impl XdgShellHandler for GlobalState {
                     .map(|w| w.id);
                 if let Some(victim_id) = swallow_candidate {
                     // Take the victim's slot for the new window.
-                    let victim_slot = self.grid.windows.get(&victim_id)
+                    let victim_slot = self
+                        .grid
+                        .windows
+                        .get(&victim_id)
                         .and_then(|w| w.current_slot);
-                    let victim_ws   = self.grid.windows.get(&victim_id)
-                        .map(|w| w.workspace);
+                    let victim_ws = self.grid.windows.get(&victim_id).map(|w| w.workspace);
                     if let (Some(slot), Some(ws)) = (victim_slot, victim_ws) {
-                        hints.slot      = Some(slot);
+                        hints.slot = Some(slot);
                         hints.workspace = Some(ws);
-                        hints.swallows  = Some(victim_id);
-                        tracing::debug!(
-                            new_pid, ppid, victim_id,
-                            "Swallowing window (§22.4)"
-                        );
+                        hints.swallows = Some(victim_id);
+                        tracing::debug!(new_pid, ppid, victim_id, "Swallowing window (§22.4)");
                     }
                 }
             }
@@ -173,7 +198,7 @@ impl XdgShellHandler for GlobalState {
         // Plugin: window_pre_open (§13) — window not yet assigned an ID.
         {
             let app_id_cstr = std::ffi::CString::new(app_id.as_str()).unwrap_or_default();
-            let title_cstr  = std::ffi::CString::new(title.as_str()).unwrap_or_default();
+            let title_cstr = std::ffi::CString::new(title.as_str()).unwrap_or_default();
             let info = crate::plugins::GriddyWindowInfo {
                 id: 0,
                 app_id: app_id_cstr.as_ptr(),
@@ -188,18 +213,28 @@ impl XdgShellHandler for GlobalState {
             }
         }
 
-        let AddWindowResult { id, slot_adapted, state_adapted } = self.grid.add_window(surface.clone(), hints);
+        let AddWindowResult {
+            id,
+            slot_adapted,
+            state_adapted,
+        } = self.grid.add_window(surface.clone(), hints);
 
         // Store the app_id/title from the rule evaluation.
-        self.grid.update_window_metadata(id, app_id.to_string(), title.to_string());
+        self.grid
+            .update_window_metadata(id, app_id.to_string(), title.to_string());
 
         tracing::debug!(window_id = id, "New toplevel mapped");
 
         // Start open fade-in animation (skipped by rule no_animations, §22.13).
-        let skip_anim = self.grid.windows.get(&id)
+        let skip_anim = self
+            .grid
+            .windows
+            .get(&id)
             .map(|w| w.no_animations)
             .unwrap_or(false);
-        let open_ms = if skip_anim { 0 } else {
+        let open_ms = if skip_anim {
+            0
+        } else {
             self.anim_duration(self.config.animations.open_duration_ms as u64)
         };
         if open_ms > 0 {
@@ -207,10 +242,9 @@ impl XdgShellHandler for GlobalState {
         }
 
         // Register with ext-foreign-toplevel-list-v1.
-        let handle = self.foreign_toplevel_state.new_toplevel::<GlobalState>(
-            title.clone(),
-            app_id.clone(),
-        );
+        let handle = self
+            .foreign_toplevel_state
+            .new_toplevel::<GlobalState>(title.clone(), app_id.clone());
         self.toplevel_handles.insert(id, handle);
 
         // Register with wlr-foreign-toplevel-management-unstable-v1.
@@ -219,7 +253,11 @@ impl XdgShellHandler for GlobalState {
         // Emit window_opened and window_placed events.
         if let Some(w) = self.grid.windows.get(&id) {
             let (wc, wr) = w.workspace;
-            let slot_str = w.current_slot.map(ipc_cmds::slot_name).unwrap_or("").to_owned();
+            let slot_str = w
+                .current_slot
+                .map(ipc_cmds::slot_name)
+                .unwrap_or("")
+                .to_owned();
             self.pending_events.push(Event::WindowOpened {
                 id,
                 app_id: app_id.to_string(),
@@ -246,7 +284,10 @@ impl XdgShellHandler for GlobalState {
                     id,
                     requested_state: ipc_cmds::state_name(req_state).to_owned(),
                     actual_state: ipc_cmds::state_name(actual_state).to_owned(),
-                    actual_slot: actual_slot.map(ipc_cmds::slot_name).unwrap_or("").to_owned(),
+                    actual_slot: actual_slot
+                        .map(ipc_cmds::slot_name)
+                        .unwrap_or("")
+                        .to_owned(),
                 });
             }
         }
@@ -254,7 +295,10 @@ impl XdgShellHandler for GlobalState {
         // Focus stealing prevention (§22.5): if there was already a focused window
         // and the new window stole focus, revert and mark the new window urgent.
         // Windows with steal_focus = true in their rule bypass this check.
-        let steal_focus_allowed = self.grid.windows.get(&id)
+        let steal_focus_allowed = self
+            .grid
+            .windows
+            .get(&id)
             .map(|w| w.steal_focus)
             .unwrap_or(false);
         if self.config.windows.new_window.focus_steal_prevention
@@ -335,7 +379,10 @@ impl XdgShellHandler for GlobalState {
                     id: id as u32,
                     app_id: empty.as_ptr(),
                     title: empty.as_ptr(),
-                    x: 0, y: 0, w: 0, h: 0,
+                    x: 0,
+                    y: 0,
+                    w: 0,
+                    h: 0,
                 };
                 for plugin in &mut self.plugins {
                     plugin.call_window_post_close(&info);
@@ -464,12 +511,12 @@ fn evaluate_rules(
 
 fn parse_slot(s: &str) -> Option<Slot> {
     match s {
-        "half-left"   | "HalfLeft"   => Some(Slot::HalfLeft),
-        "half-right"  | "HalfRight"  => Some(Slot::HalfRight),
-        "quarter-tl"  | "QuarterTL"  => Some(Slot::QuarterTL),
-        "quarter-tr"  | "QuarterTR"  => Some(Slot::QuarterTR),
-        "quarter-bl"  | "QuarterBL"  => Some(Slot::QuarterBL),
-        "quarter-br"  | "QuarterBR"  => Some(Slot::QuarterBR),
+        "half-left" | "HalfLeft" => Some(Slot::HalfLeft),
+        "half-right" | "HalfRight" => Some(Slot::HalfRight),
+        "quarter-tl" | "QuarterTL" => Some(Slot::QuarterTL),
+        "quarter-tr" | "QuarterTR" => Some(Slot::QuarterTR),
+        "quarter-bl" | "QuarterBL" => Some(Slot::QuarterBL),
+        "quarter-br" | "QuarterBR" => Some(Slot::QuarterBR),
         _ => {
             tracing::warn!(slot = %s, "Unknown slot in rule — ignoring");
             None
@@ -479,9 +526,9 @@ fn parse_slot(s: &str) -> Option<Slot> {
 
 fn parse_state(s: &str) -> Option<WindowState> {
     match s {
-        "tiled"            => Some(WindowState::Tiled),
-        "floating"         => Some(WindowState::Floating),
-        "fullscreen"       => Some(WindowState::Fullscreen),
+        "tiled" => Some(WindowState::Tiled),
+        "floating" => Some(WindowState::Floating),
+        "fullscreen" => Some(WindowState::Fullscreen),
         "total-fullscreen" => Some(WindowState::TotalFullscreen),
         _ => {
             tracing::warn!(state = %s, "Unknown state in rule — ignoring");

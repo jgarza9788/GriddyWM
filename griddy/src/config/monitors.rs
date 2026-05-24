@@ -213,13 +213,15 @@ mod tests {
 
     #[test]
     fn single_monitor_entry() {
-        let cfg = parse(r#"
+        let cfg = parse(
+            r#"
 [[monitor]]
 name = "DP-1"
 mode = "2560x1440@165"
 scale = 1.0
 position = [0, 0]
-"#);
+"#,
+        );
         assert_eq!(cfg.monitors.len(), 1);
         let m = &cfg.monitors[0];
         assert_eq!(m.name, "DP-1");
@@ -229,16 +231,19 @@ position = [0, 0]
 
     #[test]
     fn default_mode_is_preferred() {
-        let cfg = parse(r#"
+        let cfg = parse(
+            r#"
 [[monitor]]
 name = "HDMI-A-1"
-"#);
+"#,
+        );
         assert_eq!(cfg.monitors[0].mode, "preferred");
     }
 
     #[test]
     fn for_connector_finds_by_name() {
-        let cfg = parse(r#"
+        let cfg = parse(
+            r#"
 [[monitor]]
 name = "eDP-1"
 scale = 2.0
@@ -246,7 +251,8 @@ scale = 2.0
 [[monitor]]
 name = "DP-2"
 scale = 1.0
-"#);
+"#,
+        );
         assert_eq!(cfg.for_connector("eDP-1").unwrap().scale, 2.0);
         assert_eq!(cfg.for_connector("DP-2").unwrap().scale, 1.0);
         assert!(cfg.for_connector("HDMI-A-1").is_none());
@@ -254,21 +260,25 @@ scale = 1.0
 
     #[test]
     fn vrr_policy_parses() {
-        let cfg = parse(r#"
+        let cfg = parse(
+            r#"
 [[monitor]]
 name = "DP-1"
 vrr = "fullscreen"
-"#);
+"#,
+        );
         assert_eq!(cfg.monitors[0].vrr, VrrPolicy::Fullscreen);
     }
 
     #[test]
     fn transform_parses() {
-        let cfg = parse(r#"
+        let cfg = parse(
+            r#"
 [[monitor]]
 name = "DP-1"
 transform = "90"
-"#);
+"#,
+        );
         assert_eq!(cfg.monitors[0].transform, OutputTransform::Rotate90);
     }
 }

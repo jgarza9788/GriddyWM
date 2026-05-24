@@ -183,7 +183,9 @@ impl Default for RuleAction {
     }
 }
 
-fn default_above_tf() -> bool { true }
+fn default_above_tf() -> bool {
+    true
+}
 
 // ─── Glob matching ────────────────────────────────────────────────────────────
 
@@ -200,9 +202,7 @@ pub fn glob_match_pub(pat: &str, s: &str) -> bool {
 fn glob_bytes(pat: &[u8], s: &[u8]) -> bool {
     match (pat.first(), s.first()) {
         (None, None) => true,
-        (Some(&b'*'), _) => {
-            glob_bytes(&pat[1..], s) || (!s.is_empty() && glob_bytes(pat, &s[1..]))
-        }
+        (Some(&b'*'), _) => glob_bytes(&pat[1..], s) || (!s.is_empty() && glob_bytes(pat, &s[1..])),
         (Some(&b'?'), Some(_)) => glob_bytes(&pat[1..], &s[1..]),
         (Some(p), Some(c)) if p == c => glob_bytes(&pat[1..], &s[1..]),
         _ => false,
@@ -216,7 +216,7 @@ mod tests {
     fn make_rule(app_id: Option<&str>, title: Option<&str>) -> super::Rule {
         let mut r = super::Rule::default();
         r.match_.app_id = app_id.map(|s| s.to_owned());
-        r.match_.title  = title.map(|s| s.to_owned());
+        r.match_.title = title.map(|s| s.to_owned());
         r
     }
 
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     fn matches_app_id() {
         let r = make_rule(Some("kitty"), None);
-        assert!( r.matches("kitty", "", false, None, false));
+        assert!(r.matches("kitty", "", false, None, false));
         assert!(!r.matches("alacritty", "", false, None, false));
     }
 
@@ -255,7 +255,7 @@ mod tests {
     fn matches_workspace() {
         let mut r = super::Rule::default();
         r.match_.workspace = Some([1, 2]);
-        assert!( r.matches("", "", false, Some((1, 2)), false));
+        assert!(r.matches("", "", false, Some((1, 2)), false));
         assert!(!r.matches("", "", false, Some((0, 0)), false));
         assert!(!r.matches("", "", false, None, false));
     }
@@ -264,7 +264,7 @@ mod tests {
     fn matches_title_regex() {
         let mut r = super::Rule::default();
         r.match_.title_regex = Some("Friends List".to_owned());
-        assert!( r.matches("Steam", "Friends List", false, None, false));
+        assert!(r.matches("Steam", "Friends List", false, None, false));
         assert!(!r.matches("Steam", "Library", false, None, false));
     }
 
@@ -272,7 +272,7 @@ mod tests {
     fn matches_is_xwayland() {
         let mut r = super::Rule::default();
         r.match_.is_xwayland = Some(true);
-        assert!( r.matches("", "", true,  None, false));
+        assert!(r.matches("", "", true, None, false));
         assert!(!r.matches("", "", false, None, false));
     }
 }

@@ -88,7 +88,10 @@ pub fn save(state: &crate::state::GlobalState) {
         });
     }
 
-    let session = SessionState { version: 1, windows };
+    let session = SessionState {
+        version: 1,
+        windows,
+    };
     let path = session_file();
     match serde_json::to_string_pretty(&session) {
         Ok(json) => {
@@ -129,11 +132,7 @@ impl SessionState {
             return Some(self.windows.remove(idx));
         }
         // Fall back to app_id-only match.
-        if let Some(idx) = self
-            .windows
-            .iter()
-            .position(|w| w.app_id == app_id)
-        {
+        if let Some(idx) = self.windows.iter().position(|w| w.app_id == app_id) {
             return Some(self.windows.remove(idx));
         }
         None
@@ -165,7 +164,10 @@ mod tests {
 
     #[test]
     fn take_hint_exact_match() {
-        let mut s = make_state(vec![("kitty", "Terminal", 0, 0), ("firefox", "Browser", 1, 0)]);
+        let mut s = make_state(vec![
+            ("kitty", "Terminal", 0, 0),
+            ("firefox", "Browser", 1, 0),
+        ]);
         let h = s.take_hint("kitty", "Terminal").unwrap();
         assert_eq!(h.workspace_col, 0);
         assert_eq!(s.windows.len(), 1);

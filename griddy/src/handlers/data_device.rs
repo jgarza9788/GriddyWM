@@ -1,10 +1,10 @@
 use smithay::{
     delegate_data_device,
     wayland::selection::{
+        SelectionHandler,
         data_device::{
             ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler,
         },
-        SelectionHandler,
     },
 };
 

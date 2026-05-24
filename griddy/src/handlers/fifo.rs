@@ -9,9 +9,7 @@ use wayland_protocols::wp::fifo::v1::server::{
     wp_fifo_manager_v1::{self, WpFifoManagerV1},
     wp_fifo_v1::{self, WpFifoV1},
 };
-use wayland_server::{
-    Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New,
-};
+use wayland_server::{Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New};
 
 use crate::state::GlobalState;
 

@@ -1,6 +1,4 @@
-use smithay::{
-    reexports::wayland_server::backend::ObjectId, wayland::shell::xdg::ToplevelSurface,
-};
+use smithay::{reexports::wayland_server::backend::ObjectId, wayland::shell::xdg::ToplevelSurface};
 
 pub type WindowId = u64;
 

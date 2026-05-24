@@ -1,3 +1,4 @@
+use smithay::wayland::compositor;
 use smithay::{
     delegate_layer_shell,
     reexports::wayland_server::protocol::wl_output::WlOutput,
@@ -5,7 +6,6 @@ use smithay::{
         Layer, LayerSurface, LayerSurfaceCachedState, WlrLayerShellHandler, WlrLayerShellState,
     },
 };
-use smithay::wayland::compositor;
 use wayland_server::Resource;
 
 use crate::state::GlobalState;
@@ -55,7 +55,8 @@ impl WlrLayerShellHandler for GlobalState {
 
     fn layer_destroyed(&mut self, surface: LayerSurface) {
         let wl_id = surface.wl_surface().id();
-        self.layer_surfaces.retain(|s| s.surface.wl_surface().id() != wl_id);
+        self.layer_surfaces
+            .retain(|s| s.surface.wl_surface().id() != wl_id);
         self.recompute_usable_area();
         tracing::debug!("Layer surface destroyed");
     }
@@ -66,9 +67,13 @@ delegate_layer_shell!(GlobalState);
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
 
 /// Compute a layer surface's rect from its cached state and output dimensions.
-pub fn layer_rect(cached: &LayerSurfaceCachedState, output_w: i32, output_h: i32) -> crate::grid::window::Rect {
-    use smithay::wayland::shell::wlr_layer::Anchor;
+pub fn layer_rect(
+    cached: &LayerSurfaceCachedState,
+    output_w: i32,
+    output_h: i32,
+) -> crate::grid::window::Rect {
     use crate::grid::window::Rect;
+    use smithay::wayland::shell::wlr_layer::Anchor;
 
     let anchor = cached.anchor;
     let req_w = cached.size.w;

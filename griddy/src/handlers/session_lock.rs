@@ -16,7 +16,9 @@
 use smithay::{
     delegate_session_lock,
     reexports::wayland_server::protocol::wl_output::WlOutput,
-    wayland::session_lock::{LockSurface, SessionLockHandler, SessionLockManagerState, SessionLocker},
+    wayland::session_lock::{
+        LockSurface, SessionLockHandler, SessionLockManagerState, SessionLocker,
+    },
 };
 
 use crate::ipc::events::Event;

@@ -28,8 +28,7 @@ pub struct IpcServer {
 
 impl IpcServer {
     pub fn new(instance_sig: &str) -> Result<Self> {
-        let runtime_dir =
-            std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_owned());
+        let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_owned());
         let socket_dir = PathBuf::from(&runtime_dir)
             .join("griddy")
             .join(instance_sig);
@@ -71,7 +70,10 @@ impl IpcServer {
                 Ok((stream, _)) => {
                     stream.set_nonblocking(true).ok();
                     self.evt_clients.push(stream);
-                    tracing::debug!("IPC: new event subscriber ({} total)", self.evt_clients.len());
+                    tracing::debug!(
+                        "IPC: new event subscriber ({} total)",
+                        self.evt_clients.len()
+                    );
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
                 Err(e) => {

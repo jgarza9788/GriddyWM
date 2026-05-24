@@ -18,7 +18,7 @@ use std::time::Duration;
 use tracing_subscriber::prelude::*;
 use wayland_server::Display;
 
-use backend::{run_backend, BackendType};
+use backend::{BackendType, run_backend};
 use state::GlobalState;
 
 /// GriddyWM — grid-based Wayland compositor
@@ -55,8 +55,7 @@ struct Args {
 }
 
 fn pid_file_path() -> PathBuf {
-    let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
-        .unwrap_or_else(|_| "/tmp".into());
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".into());
     PathBuf::from(runtime_dir).join("griddy.lock")
 }
 
@@ -112,7 +111,14 @@ fn record_crash_and_check_safe_mode() -> bool {
 
     // Write back with this new startup timestamp appended.
     stamps.push(now);
-    let _ = std::fs::write(&path, stamps.iter().map(|t| t.to_string()).collect::<Vec<_>>().join("\n"));
+    let _ = std::fs::write(
+        &path,
+        stamps
+            .iter()
+            .map(|t| t.to_string())
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
 
     let count = stamps.len();
     if count >= 3 {
@@ -129,14 +135,13 @@ fn clear_crash_history() {
 }
 
 fn replace_running_instance() -> Result<()> {
-    use nix::sys::signal::{kill, Signal};
+    use nix::sys::signal::{Signal, kill};
     use nix::unistd::Pid;
 
     let path = pid_file_path();
     let content = std::fs::read_to_string(&path)
         .context("No running griddy instance (no lock file); starting fresh")?;
-    let pid: u32 = content.trim().parse()
-        .context("Invalid PID in lock file")?;
+    let pid: u32 = content.trim().parse().context("Invalid PID in lock file")?;
 
     let proc_path = PathBuf::from(format!("/proc/{}", pid));
     if !proc_path.exists() {
@@ -188,10 +193,7 @@ fn first_run_copy_default_config() {
             "First-run: wrote default config to {}",
             config_file.display()
         ),
-        Err(e) => tracing::warn!(
-            "First-run: could not write {}: {e}",
-            config_file.display()
-        ),
+        Err(e) => tracing::warn!("First-run: could not write {}: {e}", config_file.display()),
     }
 }
 
@@ -216,7 +218,11 @@ fn main() -> Result<()> {
     tracing_subscriber::registry()
         .with(env_filter)
         .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
-        .with(tracing_subscriber::fmt::layer().with_writer(non_blocking).with_ansi(false))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(non_blocking)
+                .with_ansi(false),
+        )
         .init();
 
     // Keep _guard alive for the duration of main so the file writer isn't dropped.
@@ -243,16 +249,20 @@ fn main() -> Result<()> {
     }
 
     // ── Load config ───────────────────────────────────────────────────────────
-    let resolved_config_path = if safe_mode { None } else { args.config.clone().or_else(config::config_path) };
+    let resolved_config_path = if safe_mode {
+        None
+    } else {
+        args.config.clone().or_else(config::config_path)
+    };
     let config = config::load_config(resolved_config_path.as_deref())
         .context("Failed to load configuration")?;
 
     if args.check {
         // Validate all subsidiary config files too.
         if let Some(ref path) = resolved_config_path && let Some(dir) = path.parent() {
-            let _theme   = config::load_config(Some(path)); // already done above
-            let _rules   = dir.join("rules.toml");
-            let _tpls    = config::load_templates(dir);
+            let _theme = config::load_config(Some(path)); // already done above
+            let _rules = dir.join("rules.toml");
+            let _tpls = config::load_templates(dir);
             // report any template parse warnings (already logged inside load_templates)
         }
         println!("Config OK");
@@ -274,8 +284,14 @@ fn main() -> Result<()> {
         Display::new().context("Failed to create Wayland display")?;
 
     // ── Build compositor state ────────────────────────────────────────────────
-    let mut state = GlobalState::new(&display, config, resolved_config_path, safe_mode, is_first_run)
-        .context("Failed to initialize compositor state")?;
+    let mut state = GlobalState::new(
+        &display,
+        config,
+        resolved_config_path,
+        safe_mode,
+        is_first_run,
+    )
+    .context("Failed to initialize compositor state")?;
 
     // §22.14 — `-d` enables debug overlay automatically.
     if args.debug {

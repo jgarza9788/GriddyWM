@@ -8,9 +8,7 @@ use wayland_protocols::wp::tearing_control::v1::server::{
     wp_tearing_control_manager_v1::{self, WpTearingControlManagerV1},
     wp_tearing_control_v1::{self, WpTearingControlV1},
 };
-use wayland_server::{
-    Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New,
-};
+use wayland_server::{Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New};
 
 use crate::state::GlobalState;
 
@@ -69,7 +67,10 @@ impl Dispatch<WpTearingControlV1, ()> for GlobalState {
     ) {
         match request {
             wp_tearing_control_v1::Request::SetPresentationHint { hint } => {
-                tracing::debug!(?hint, "wp_tearing_control_v1: set_presentation_hint (no-op in winit)");
+                tracing::debug!(
+                    ?hint,
+                    "wp_tearing_control_v1: set_presentation_hint (no-op in winit)"
+                );
             }
             wp_tearing_control_v1::Request::Destroy => {}
             _ => {}

@@ -44,9 +44,15 @@ pub enum WorkspaceSyncMode {
     Synced,
 }
 
-fn default_cols() -> u8 { 3 }
-fn default_rows() -> u8 { 3 }
-fn default_workspace() -> [u8; 2] { [1, 1] }
+fn default_cols() -> u8 {
+    3
+}
+fn default_rows() -> u8 {
+    3
+}
+fn default_workspace() -> [u8; 2] {
+    [1, 1]
+}
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -79,8 +85,12 @@ impl Default for ViewConfig {
     }
 }
 
-fn default_slide_duration() -> u32 { 220 }
-fn default_slide_easing() -> String { "ease-out-cubic".into() }
+fn default_slide_duration() -> u32 {
+    220
+}
+fn default_slide_easing() -> String {
+    "ease-out-cubic".into()
+}
 
 // ─── Animations ──────────────────────────────────────────────────────────────
 
@@ -105,18 +115,22 @@ pub struct AnimationsConfig {
 impl Default for AnimationsConfig {
     fn default() -> Self {
         Self {
-            open_duration_ms:  default_open_duration(),
+            open_duration_ms: default_open_duration(),
             close_duration_ms: default_close_duration(),
-            on_interrupt:      default_on_interrupt(),
-            crossfade_ms:      default_crossfade_ms(),
+            on_interrupt: default_on_interrupt(),
+            crossfade_ms: default_crossfade_ms(),
             respect_prefers_reduced_motion: default_true_anim(),
         }
     }
 }
 
-fn default_true_anim() -> bool { true }
+fn default_true_anim() -> bool {
+    true
+}
 
-fn default_open_duration()  -> u32    { 160 }
+fn default_open_duration() -> u32 {
+    160
+}
 
 // ─── Shaders ─────────────────────────────────────────────────────────────────
 
@@ -140,9 +154,15 @@ pub struct ShadersConfig {
     #[serde(default)]
     pub overview_zoom: String,
 }
-fn default_close_duration() -> u32    { 120 }
-fn default_on_interrupt()   -> String { "snap-then-start".into() }
-fn default_crossfade_ms()   -> u32    { 60 }
+fn default_close_duration() -> u32 {
+    120
+}
+fn default_on_interrupt() -> String {
+    "snap-then-start".into()
+}
+fn default_crossfade_ms() -> u32 {
+    60
+}
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -200,10 +220,18 @@ impl Default for InputConfig {
     }
 }
 
-fn default_mod_key() -> String { "Super".into() }
-fn default_double_click() -> u32 { 250 }
-fn default_constraint_break() -> String { "Super+Escape".into() }
-fn default_true() -> bool { true }
+fn default_mod_key() -> String {
+    "Super".into()
+}
+fn default_double_click() -> u32 {
+    250
+}
+fn default_constraint_break() -> String {
+    "Super+Escape".into()
+}
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -240,9 +268,15 @@ impl Default for KeyboardConfig {
     }
 }
 
-fn default_layout() -> String { "us".into() }
-fn default_repeat_rate() -> u32 { 35 }
-fn default_repeat_delay() -> u32 { 400 }
+fn default_layout() -> String {
+    "us".into()
+}
+fn default_repeat_rate() -> u32 {
+    35
+}
+fn default_repeat_delay() -> u32 {
+    400
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TouchpadConfig {
@@ -261,7 +295,9 @@ impl Default for TouchpadConfig {
     }
 }
 
-fn default_scroll_method() -> String { "two-finger".into() }
+fn default_scroll_method() -> String {
+    "two-finger".into()
+}
 
 // ─── Windows ─────────────────────────────────────────────────────────────────
 
@@ -327,8 +363,12 @@ impl Default for WindowsConfig {
     }
 }
 
-fn default_edge_snap_threshold() -> u32 { 24 }
-fn default_unsnap_threshold() -> u32 { 40 }
+fn default_edge_snap_threshold() -> u32 {
+    24
+}
+fn default_unsnap_threshold() -> u32 {
+    40
+}
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -392,8 +432,12 @@ impl Default for NewWindowConfig {
     }
 }
 
-fn default_transient() -> String { "floating-on-parent".into() }
-fn default_same_app() -> String { "next-empty-slot".into() }
+fn default_transient() -> String {
+    "floating-on-parent".into()
+}
+fn default_same_app() -> String {
+    "next-empty-slot".into()
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct FloatingConfig {
@@ -415,7 +459,9 @@ impl Default for FloatingConfig {
     }
 }
 
-fn default_float_size() -> [u32; 2] { [800, 600] }
+fn default_float_size() -> [u32; 2] {
+    [800, 600]
+}
 
 // ─── Fullscreen ───────────────────────────────────────────────────────────────
 
@@ -448,7 +494,9 @@ impl Default for FullscreenConfig {
     }
 }
 
-fn default_total_release_key() -> String { "Escape".into() }
+fn default_total_release_key() -> String {
+    "Escape".into()
+}
 
 // ─── Startup ─────────────────────────────────────────────────────────────────
 
@@ -476,7 +524,11 @@ pub struct IdleConfig {
 
 impl Default for IdleConfig {
     fn default() -> Self {
-        Self { enabled: true, timeouts: Vec::new(), inhibitors: IdleInhibitorsConfig::default() }
+        Self {
+            enabled: true,
+            timeouts: Vec::new(),
+            inhibitors: IdleInhibitorsConfig::default(),
+        }
     }
 }
 
@@ -501,7 +553,11 @@ pub struct IdleInhibitorsConfig {
 
 impl Default for IdleInhibitorsConfig {
     fn default() -> Self {
-        Self { honor_app_inhibits: true, no_idle_on_game: true, no_idle_on_audio: false }
+        Self {
+            honor_app_inhibits: true,
+            no_idle_on_game: true,
+            no_idle_on_audio: false,
+        }
     }
 }
 
@@ -527,7 +583,9 @@ impl Default for XWaylandConfig {
     }
 }
 
-fn default_scale() -> f64 { 1.0 }
+fn default_scale() -> f64 {
+    1.0
+}
 
 // ─── Session persistence config ───────────────────────────────────────────────
 
@@ -550,7 +608,9 @@ impl Default for SessionConfig {
     }
 }
 
-fn default_autosave_s() -> u32 { 60 }
+fn default_autosave_s() -> u32 {
+    60
+}
 
 // ─── Keybinds ─────────────────────────────────────────────────────────────────
 
@@ -623,7 +683,9 @@ pub struct GestureConfig {
     pub args: Vec<String>,
 }
 
-fn default_gesture_fingers() -> u8 { 4 }
+fn default_gesture_fingers() -> u8 {
+    4
+}
 
 /// A named modal key mode.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -685,10 +747,18 @@ impl Default for OverviewConfig {
     }
 }
 
-fn default_hot_corner()       -> String { "top-left".into() }
-fn default_hot_corner_delay() -> u32    { 150 }
-fn default_overview_gap()     -> i32    { 16 }
-fn default_overview_margin()  -> i32    { 32 }
+fn default_hot_corner() -> String {
+    "top-left".into()
+}
+fn default_hot_corner_delay() -> u32 {
+    150
+}
+fn default_overview_gap() -> i32 {
+    16
+}
+fn default_overview_margin() -> i32 {
+    32
+}
 
 // ─── Root Config ─────────────────────────────────────────────────────────────
 
@@ -898,7 +968,11 @@ rows = 2"#;
 
     #[test]
     fn input_follow_mouse_variants() {
-        for (s, expected) in [("off", FollowMouse::Off), ("loose", FollowMouse::Loose), ("strict", FollowMouse::Strict)] {
+        for (s, expected) in [
+            ("off", FollowMouse::Off),
+            ("loose", FollowMouse::Loose),
+            ("strict", FollowMouse::Strict),
+        ] {
             let toml = format!(r#"follow_mouse = "{s}""#);
             let cfg: InputConfig = toml::from_str(&toml).expect("should parse");
             assert_eq!(cfg.follow_mouse, expected, "variant: {s}");

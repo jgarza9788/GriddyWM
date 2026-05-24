@@ -25,10 +25,12 @@ pub struct WlrForeignToplevelState {
 
 impl WlrForeignToplevelState {
     pub fn new() -> Self {
-        Self { managers: Vec::new(), handles: HashMap::new() }
+        Self {
+            managers: Vec::new(),
+            handles: HashMap::new(),
+        }
     }
 }
-
 // ─── State encoding ──────────────────────────────────────────────────────────
 
 /// Encode window state as a wl_array of uint32 values (little-endian).
@@ -38,7 +40,10 @@ fn encode_wlr_state(window_state: WindowState, is_focused: bool) -> Vec<u8> {
     if is_focused {
         states.push(4u32); // activated
     }
-    if matches!(window_state, WindowState::Fullscreen | WindowState::TotalFullscreen) {
+    if matches!(
+        window_state,
+        WindowState::Fullscreen | WindowState::TotalFullscreen
+    ) {
         states.push(8u32); // fullscreen
     }
     let mut bytes = Vec::with_capacity(states.len() * 4);
@@ -54,7 +59,9 @@ impl GlobalState {
     /// Create wlr-foreign-toplevel handles for a newly mapped window on all
     /// currently bound manager clients.
     pub fn wlr_new_toplevel(&mut self, id: WindowId, title: String, app_id: String) {
-        let Some(window) = self.grid.windows.get(&id) else { return };
+        let Some(window) = self.grid.windows.get(&id) else {
+            return;
+        };
         let window_state = window.current_state;
         let is_focused = self.grid.focused_window == Some(id);
         let state_bytes = encode_wlr_state(window_state, is_focused);
@@ -70,10 +77,12 @@ impl GlobalState {
             .collect();
 
         for manager in &managers {
-            let Some(client) = manager.client() else { continue };
+            let Some(client) = manager.client() else {
+                continue;
+            };
             let version = manager.version().min(3);
-            let Ok(handle) =
-                client.create_resource::<ZwlrForeignToplevelHandleV1, WindowId, GlobalState>(
+            let Ok(handle) = client
+                .create_resource::<ZwlrForeignToplevelHandleV1, WindowId, GlobalState>(
                     &dh, version, id,
                 )
             else {
@@ -84,7 +93,11 @@ impl GlobalState {
             handle.app_id(app_id.clone());
             handle.state(state_bytes.clone());
             handle.done();
-            self.wlr_toplevel_state.handles.entry(id).or_default().push(handle);
+            self.wlr_toplevel_state
+                .handles
+                .entry(id)
+                .or_default()
+                .push(handle);
         }
     }
 
@@ -148,7 +161,6 @@ impl GlobalState {
         }
     }
 }
-
 // ─── GlobalDispatch — initial bind ───────────────────────────────────────────
 
 impl GlobalDispatch<ZwlrForeignToplevelManagerV1, ()> for GlobalState {
@@ -169,14 +181,20 @@ impl GlobalDispatch<ZwlrForeignToplevelManagerV1, ()> for GlobalState {
             .iter()
             .map(|(&wid, w)| {
                 let is_focused = state.grid.focused_window == Some(wid);
-                (wid, w.current_state, is_focused, w.title.clone(), w.app_id.clone())
+                (
+                    wid,
+                    w.current_state,
+                    is_focused,
+                    w.title.clone(),
+                    w.app_id.clone(),
+                )
             })
             .collect();
 
         for (window_id, window_state, is_focused, title, app_id) in windows {
             let version = manager.version().min(3);
-            let Ok(handle) =
-                client.create_resource::<ZwlrForeignToplevelHandleV1, WindowId, GlobalState>(
+            let Ok(handle) = client
+                .create_resource::<ZwlrForeignToplevelHandleV1, WindowId, GlobalState>(
                     dh, version, window_id,
                 )
             else {
@@ -187,7 +205,12 @@ impl GlobalDispatch<ZwlrForeignToplevelManagerV1, ()> for GlobalState {
             handle.app_id(app_id);
             handle.state(encode_wlr_state(window_state, is_focused));
             handle.done();
-            state.wlr_toplevel_state.handles.entry(window_id).or_default().push(handle);
+            state
+                .wlr_toplevel_state
+                .handles
+                .entry(window_id)
+                .or_default()
+                .push(handle);
         }
 
         state.wlr_toplevel_state.managers.push(manager);
@@ -240,10 +263,12 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
                 let ws = state.grid.windows.get(&id).map(|w| w.workspace);
                 if let Some(coords) = ws && coords != state.grid.focused {
                     state.grid.switch_workspace(coords);
-                    state.pending_events.push(crate::ipc::events::Event::WorkspaceChanged {
-                        col: coords.0,
-                        row: coords.1,
-                    });
+                    state
+                        .pending_events
+                        .push(crate::ipc::events::Event::WorkspaceChanged {
+                            col: coords.0,
+                            row: coords.1,
+                        });
                 }
                 state.grid.set_focus(id);
                 let surf = state.grid.focused_surface().cloned();
@@ -264,7 +289,11 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
                 }
             }
             zwlr_foreign_toplevel_handle_v1::Request::SetFullscreen { output: _ } => {
-                let info = state.grid.windows.get(&id).map(|w| (w.workspace, w.current_state));
+                let info = state
+                    .grid
+                    .windows
+                    .get(&id)
+                    .map(|w| (w.workspace, w.current_state));
                 if let Some((_coords, ws)) = info && !matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
                     state.grid.set_focus(id);
                     state.grid.toggle_fullscreen();
@@ -272,7 +301,11 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
                 }
             }
             zwlr_foreign_toplevel_handle_v1::Request::UnsetFullscreen => {
-                let info = state.grid.windows.get(&id).map(|w| (w.workspace, w.current_state));
+                let info = state
+                    .grid
+                    .windows
+                    .get(&id)
+                    .map(|w| (w.workspace, w.current_state));
                 if let Some((_coords, ws)) = info && matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
                     state.grid.set_focus(id);
                     state.grid.toggle_fullscreen();
@@ -300,4 +333,3 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
         }
     }
 }
-

@@ -8,7 +8,10 @@ use crate::state::GlobalState;
 
 /// Commands that mutate compositor state or spawn processes; blocked while locked.
 fn is_locked_blocked(verb: &str) -> bool {
-    matches!(verb, "kill" | "dispatch" | "reload" | "keyword" | "setprop" | "notify" | "plugin")
+    matches!(
+        verb,
+        "kill" | "dispatch" | "reload" | "keyword" | "setprop" | "notify" | "plugin"
+    )
 }
 
 /// Handle a single command line, return the response string.
@@ -35,35 +38,48 @@ pub fn handle(cmd: &str, state: &mut GlobalState) -> String {
     }
 
     match verb {
-        "version"         => version(json),
-        "reload"          => reload_cmd(rest, state),
-        "kill"            => { state.should_exit = true; "ok".into() }
-        "dispatch"        => dispatch_cmd(rest, json, state),
-        "workspaces"      => workspaces(json, state),
-        "windows"         => windows(json, state),
-        "activewindow"    => active_window(json, state),
+        "version" => version(json),
+        "reload" => reload_cmd(rest, state),
+        "kill" => {
+            state.should_exit = true;
+            "ok".into()
+        }
+        "dispatch" => dispatch_cmd(rest, json, state),
+        "workspaces" => workspaces(json, state),
+        "windows" => windows(json, state),
+        "activewindow" => active_window(json, state),
         "activeworkspace" => active_workspace(json, state),
-        "grid"            => grid_cmd(rest, json, state),
-        "monitors"        => monitors(json, state),
-        "cursorpos"       => {
+        "grid" => grid_cmd(rest, json, state),
+        "monitors" => monitors(json, state),
+        "cursorpos" => {
             let (x, y) = state.cursor_pos;
             let xi = x as i64;
             let yi = y as i64;
-            if json { format!(r#"{{"x":{xi},"y":{yi}}}"#) } else { format!("{xi},{yi}") }
+            if json {
+                format!(r#"{{"x":{xi},"y":{yi}}}"#)
+            } else {
+                format!("{xi},{yi}")
+            }
         }
-        "keyword"         => keyword_cmd(rest, json, state),
-        "layers"          => layers_cmd(json, state),
-        "animations"      => animations_info(json, state),
-        "shaders"         => shaders_cmd(json, state),
-        "getoption"       => getoption_cmd(rest, json, state),
-        "setprop"         => setprop_cmd(rest, state),
-        "notify"          => notify_cmd(rest, state),
-        "globalshortcuts" => if json { "[]".into() } else { "".into() }
-        "plugin"          => plugin_cmd(rest, json, state),
-        "session"         => session_cmd(rest, json, state),
-        "debug"           => debug_cmd(rest, json, state),
-        "cheatsheet"      => cheatsheet_cmd(json, state),
-        "exit-safe-mode"  => {
+        "keyword" => keyword_cmd(rest, json, state),
+        "layers" => layers_cmd(json, state),
+        "animations" => animations_info(json, state),
+        "shaders" => shaders_cmd(json, state),
+        "getoption" => getoption_cmd(rest, json, state),
+        "setprop" => setprop_cmd(rest, state),
+        "notify" => notify_cmd(rest, state),
+        "globalshortcuts" => {
+            if json {
+                "[]".into()
+            } else {
+                "".into()
+            }
+        }
+        "plugin" => plugin_cmd(rest, json, state),
+        "session" => session_cmd(rest, json, state),
+        "debug" => debug_cmd(rest, json, state),
+        "cheatsheet" => cheatsheet_cmd(json, state),
+        "exit-safe-mode" => {
             if state.safe_mode {
                 state.safe_mode = false;
                 tracing::info!("Safe mode disabled via IPC exit-safe-mode");
@@ -167,7 +183,13 @@ fn grid_resize(args: &str, json: bool, state: &mut GlobalState) -> String {
     let (old_cols, old_rows) = state.grid.resize_grid(new_cols, new_rows);
     let new_cols = state.grid.cols;
     let new_rows = state.grid.rows;
-    tracing::info!("Grid resized {}x{} → {}x{}", old_cols, old_rows, new_cols, new_rows);
+    tracing::info!(
+        "Grid resized {}x{} → {}x{}",
+        old_cols,
+        old_rows,
+        new_cols,
+        new_rows
+    );
     if json {
         format!(r#"{{"ok":true,"cols":{new_cols},"rows":{new_rows}}}"#)
     } else {
@@ -216,10 +238,19 @@ fn workspaces(json: bool, state: &GlobalState) -> String {
         let lines: Vec<String> = (0..rows)
             .flat_map(|r| (0..cols).map(move |c| (c, r)))
             .map(|(c, r)| {
-                let n = state.grid.windows.values().filter(|w| w.workspace == (c, r)).count();
+                let n = state
+                    .grid
+                    .windows
+                    .values()
+                    .filter(|w| w.workspace == (c, r))
+                    .count();
                 let mark = if (c, r) == focused { " *" } else { "" };
                 let name = state.grid.workspace_name(c, r);
-                let name_part = if name.is_empty() { String::new() } else { format!(" \"{name}\"") };
+                let name_part = if name.is_empty() {
+                    String::new()
+                } else {
+                    format!(" \"{name}\"")
+                };
                 format!("{c},{r}{name_part} [{n} windows]{mark}")
             })
             .collect();
@@ -231,7 +262,12 @@ fn workspaces(json: bool, state: &GlobalState) -> String {
 
 fn active_workspace(json: bool, state: &GlobalState) -> String {
     let (col, row) = state.grid.focused;
-    let n = state.grid.windows.values().filter(|w| w.workspace == (col, row)).count();
+    let n = state
+        .grid
+        .windows
+        .values()
+        .filter(|w| w.workspace == (col, row))
+        .count();
     let name = state.grid.workspace_name(col, row);
 
     if json {
@@ -240,7 +276,11 @@ fn active_workspace(json: bool, state: &GlobalState) -> String {
             r#"{{"id":"winit:{col},{row}","col":{col},"row":{row},"monitor":"winit","name":{name_json},"windows":{n},"focused":true}}"#
         )
     } else {
-        let name_part = if name.is_empty() { String::new() } else { format!(" \"{name}\"") };
+        let name_part = if name.is_empty() {
+            String::new()
+        } else {
+            format!(" \"{name}\"")
+        };
         format!("{col},{row}{name_part} [{n} windows]")
     }
 }
@@ -266,10 +306,18 @@ fn windows(json: bool, state: &GlobalState) -> String {
 
 fn active_window(json: bool, state: &GlobalState) -> String {
     let Some(id) = state.grid.focused_window else {
-        return if json { "null".into() } else { "no focused window".into() };
+        return if json {
+            "null".into()
+        } else {
+            "no focused window".into()
+        };
     };
     let Some(w) = state.grid.windows.get(&id) else {
-        return if json { "null".into() } else { "no focused window".into() };
+        return if json {
+            "null".into()
+        } else {
+            "no focused window".into()
+        };
     };
     window_to_str(w, state, json)
 }
@@ -289,11 +337,7 @@ fn monitors(json: bool, state: &GlobalState) -> String {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-fn window_to_str(
-    w: &crate::grid::window::Window,
-    state: &GlobalState,
-    json: bool,
-) -> String {
+fn window_to_str(w: &crate::grid::window::Window, state: &GlobalState, json: bool) -> String {
     let geom = state.grid.compute_rect(w.id).unwrap_or_default();
     let (col, row) = w.workspace;
     let cur_state = state_name(w.current_state);
@@ -311,7 +355,10 @@ fn window_to_str(
             Some(s) => format!("\"{s}\""),
             None => "null".into(),
         };
-        let pid_json = match w.pid { Some(p) => p.to_string(), None => "null".into() };
+        let pid_json = match w.pid {
+            Some(p) => p.to_string(),
+            None => "null".into(),
+        };
         let shader_json = match &w.shader {
             Some(s) => format!("\"{}\"", s.replace('"', "\\\"")),
             None => "null".into(),
@@ -321,7 +368,10 @@ fn window_to_str(
             app_id = w.app_id,
             title = w.title.replace('"', "\\\""),
             si = w.stack_index,
-            gx = geom.x, gy = geom.y, gw = geom.w, gh = geom.h,
+            gx = geom.x,
+            gy = geom.y,
+            gw = geom.w,
+            gh = geom.h,
             urgent = w.is_urgent,
             opacity = w.opacity,
         )
@@ -338,20 +388,20 @@ fn window_to_str(
 
 pub fn slot_name(slot: Slot) -> &'static str {
     match slot {
-        Slot::HalfLeft   => "HalfLeft",
-        Slot::HalfRight  => "HalfRight",
-        Slot::QuarterTL  => "QuarterTL",
-        Slot::QuarterTR  => "QuarterTR",
-        Slot::QuarterBL  => "QuarterBL",
-        Slot::QuarterBR  => "QuarterBR",
+        Slot::HalfLeft => "HalfLeft",
+        Slot::HalfRight => "HalfRight",
+        Slot::QuarterTL => "QuarterTL",
+        Slot::QuarterTR => "QuarterTR",
+        Slot::QuarterBL => "QuarterBL",
+        Slot::QuarterBR => "QuarterBR",
     }
 }
 
 pub fn state_name(state: WindowState) -> &'static str {
     match state {
-        WindowState::Tiled          => "Tiled",
-        WindowState::Floating       => "Floating",
-        WindowState::Fullscreen     => "Fullscreen",
+        WindowState::Tiled => "Tiled",
+        WindowState::Floating => "Floating",
+        WindowState::Fullscreen => "Fullscreen",
         WindowState::TotalFullscreen => "TotalFullscreen",
     }
 }
@@ -359,7 +409,7 @@ pub fn state_name(state: WindowState) -> &'static str {
 fn split_verb(s: &str) -> (&str, &str) {
     match s.find(' ') {
         Some(i) => (&s[..i], s[i + 1..].trim()),
-        None    => (s, ""),
+        None => (s, ""),
     }
 }
 
@@ -395,9 +445,9 @@ fn keyword_apply(rest: &str, state: &mut GlobalState) -> String {
         "input.follow_mouse" => {
             use crate::config::types::FollowMouse;
             state.config.input.follow_mouse = match value {
-                "off"    => FollowMouse::Off,
+                "off" => FollowMouse::Off,
                 "strict" => FollowMouse::Strict,
-                _        => FollowMouse::Loose,
+                _ => FollowMouse::Loose,
             };
             "ok".into()
         }
@@ -443,17 +493,22 @@ fn keyword_apply(rest: &str, state: &mut GlobalState) -> String {
             "ok".into()
         }
         "fullscreen.performance_on_total_fullscreen" => {
-            state.config.fullscreen.performance_on_total_fullscreen = value.parse().unwrap_or(false);
+            state.config.fullscreen.performance_on_total_fullscreen =
+                value.parse().unwrap_or(false);
             "ok".into()
         }
         "shaders.screen" => {
-            state.screen_shader = if value.is_empty() || value == "clear" { None } else { Some(value.to_owned()) };
+            state.screen_shader = if value.is_empty() || value == "clear" {
+                None
+            } else {
+                Some(value.to_owned())
+            };
             "ok".into()
         }
         "animations.enabled" => {
             let enabled: bool = value.parse().unwrap_or(true);
             if !enabled {
-                state.config.animations.open_duration_ms  = 0;
+                state.config.animations.open_duration_ms = 0;
                 state.config.animations.close_duration_ms = 0;
             }
             "ok".into()
@@ -479,19 +534,25 @@ fn keyword_apply(rest: &str, state: &mut GlobalState) -> String {
         "windows.focus_on_close" => {
             use crate::config::types::FocusOnClosePolicy;
             state.config.windows.focus_on_close = match value {
-                "stack-next"    => FocusOnClosePolicy::StackNext,
+                "stack-next" => FocusOnClosePolicy::StackNext,
                 "slot-neighbor" => FocusOnClosePolicy::SlotNeighbor,
-                "none"          => FocusOnClosePolicy::None,
-                _               => FocusOnClosePolicy::LastFocused,
+                "none" => FocusOnClosePolicy::None,
+                _ => FocusOnClosePolicy::LastFocused,
             };
             "ok".into()
         }
         "grid.workspace_sync" => {
             use crate::config::types::WorkspaceSyncMode;
             let synced = matches!(value, "synced");
-            state.config.grid.workspace_sync = if synced { WorkspaceSyncMode::Synced } else { WorkspaceSyncMode::Unsynced };
+            state.config.grid.workspace_sync = if synced {
+                WorkspaceSyncMode::Synced
+            } else {
+                WorkspaceSyncMode::Unsynced
+            };
             state.workspace_synced = synced;
-            state.pending_events.push(crate::ipc::events::Event::WorkspaceSyncChanged { synced });
+            state
+                .pending_events
+                .push(crate::ipc::events::Event::WorkspaceSyncChanged { synced });
             "ok".into()
         }
         "grid.wrap_x" => {
@@ -516,18 +577,28 @@ fn keyword_apply(rest: &str, state: &mut GlobalState) -> String {
 // ─── layers ──────────────────────────────────────────────────────────────────
 
 fn layers_cmd(json: bool, state: &GlobalState) -> String {
-    let items: Vec<String> = state.layer_surfaces.iter().map(|ls| {
-        let ns = &ls.namespace;
-        let layer_name = format!("{:?}", ls.layer).to_lowercase();
-        if json {
-            format!(r#"{{"namespace":{},"layer":{}}}"#,
-                serde_json::to_string(ns).unwrap_or_default(),
-                serde_json::to_string(&layer_name).unwrap_or_default())
-        } else {
-            format!("{ns} ({layer_name})")
-        }
-    }).collect();
-    if json { format!("[{}]", items.join(",")) } else { items.join("\n") }
+    let items: Vec<String> = state
+        .layer_surfaces
+        .iter()
+        .map(|ls| {
+            let ns = &ls.namespace;
+            let layer_name = format!("{:?}", ls.layer).to_lowercase();
+            if json {
+                format!(
+                    r#"{{"namespace":{},"layer":{}}}"#,
+                    serde_json::to_string(ns).unwrap_or_default(),
+                    serde_json::to_string(&layer_name).unwrap_or_default()
+                )
+            } else {
+                format!("{ns} ({layer_name})")
+            }
+        })
+        .collect();
+    if json {
+        format!("[{}]", items.join(","))
+    } else {
+        items.join("\n")
+    }
 }
 
 // ─── animations ─────────────────────────────────────────────────────────────
@@ -547,34 +618,62 @@ fn getoption_cmd(rest: &str, json: bool, state: &GlobalState) -> String {
     let key = rest.trim();
     let value = match key {
         "animations.open_duration_ms" => state.config.animations.open_duration_ms.to_string(),
-        "input.follow_mouse"        => format!("{:?}", state.config.input.follow_mouse).to_lowercase(),
+        "input.follow_mouse" => format!("{:?}", state.config.input.follow_mouse).to_lowercase(),
         "input.cross_workspace_focus" => state.config.input.cross_workspace_focus.to_string(),
-        "gaps.windows.inner_px"     => state.config.theme.gaps.windows.inner_px.to_string(),
-        "gaps.windows.outer_px"     => state.config.theme.gaps.windows.outer_px.to_string(),
-        "grid.cols"                 => state.grid.cols.to_string(),
-        "grid.rows"                 => state.grid.rows.to_string(),
-        "theme.osd.enabled"         => state.config.theme.osd.enabled.to_string(),
-        "theme.osd.duration_ms"     => state.config.theme.osd.duration_ms.to_string(),
-        "input.warp_cursor_on_focus_change"     => state.config.input.warp_cursor_on_focus_change.to_string(),
-        "input.warp_cursor_on_workspace_change" => state.config.input.warp_cursor_on_workspace_change.to_string(),
-        "input.pointer_constraint_break_key" => state.config.input.pointer_constraint_break_key.clone(),
-        "debug.overlay"             => state.debug_overlay.to_string(),
-        "fullscreen.performance_on_total_fullscreen" => state.config.fullscreen.performance_on_total_fullscreen.to_string(),
-        "shaders.screen"            => state.screen_shader.clone().unwrap_or_default(),
+        "gaps.windows.inner_px" => state.config.theme.gaps.windows.inner_px.to_string(),
+        "gaps.windows.outer_px" => state.config.theme.gaps.windows.outer_px.to_string(),
+        "grid.cols" => state.grid.cols.to_string(),
+        "grid.rows" => state.grid.rows.to_string(),
+        "theme.osd.enabled" => state.config.theme.osd.enabled.to_string(),
+        "theme.osd.duration_ms" => state.config.theme.osd.duration_ms.to_string(),
+        "input.warp_cursor_on_focus_change" => {
+            state.config.input.warp_cursor_on_focus_change.to_string()
+        }
+        "input.warp_cursor_on_workspace_change" => state
+            .config
+            .input
+            .warp_cursor_on_workspace_change
+            .to_string(),
+        "input.pointer_constraint_break_key" => {
+            state.config.input.pointer_constraint_break_key.clone()
+        }
+        "debug.overlay" => state.debug_overlay.to_string(),
+        "fullscreen.performance_on_total_fullscreen" => state
+            .config
+            .fullscreen
+            .performance_on_total_fullscreen
+            .to_string(),
+        "shaders.screen" => state.screen_shader.clone().unwrap_or_default(),
         "animations.close_duration_ms" => state.config.animations.close_duration_ms.to_string(),
-        "input.natural_scroll"      => state.config.input.natural_scroll.to_string(),
-        "input.tap_to_click"        => state.config.input.tap_to_click.to_string(),
-        "input.disable_while_typing" => state.config.input.touchpad.disable_while_typing.to_string(),
-        "windows.focus_on_close"    => format!("{:?}", state.config.windows.focus_on_close).to_lowercase(),
+        "input.natural_scroll" => state.config.input.natural_scroll.to_string(),
+        "input.tap_to_click" => state.config.input.tap_to_click.to_string(),
+        "input.disable_while_typing" => {
+            state.config.input.touchpad.disable_while_typing.to_string()
+        }
+        "windows.focus_on_close" => {
+            format!("{:?}", state.config.windows.focus_on_close).to_lowercase()
+        }
         "windows.new_window.same_app" => state.config.windows.new_window.same_app.clone(),
-        "windows.new_window.focus_steal_prevention" => state.config.windows.new_window.focus_steal_prevention.to_string(),
-        "safe_mode"                 => state.safe_mode.to_string(),
-        "version"                   => env!("CARGO_PKG_VERSION").into(),
-        "grid.workspace_sync"       => if state.workspace_synced { "synced" } else { "unsynced" }.into(),
-        "grid.wrap_x"               => state.grid.wrap_x().to_string(),
-        "grid.wrap_y"               => state.grid.wrap_y().to_string(),
-        "windows.on_slot_conflict"  => format!("{:?}", state.config.windows.on_slot_conflict).to_lowercase(),
-        "windows.slot_adaptation"   => state.config.windows.slot_adaptation.to_string(),
+        "windows.new_window.focus_steal_prevention" => state
+            .config
+            .windows
+            .new_window
+            .focus_steal_prevention
+            .to_string(),
+        "safe_mode" => state.safe_mode.to_string(),
+        "version" => env!("CARGO_PKG_VERSION").into(),
+        "grid.workspace_sync" => if state.workspace_synced {
+            "synced"
+        } else {
+            "unsynced"
+        }
+        .into(),
+        "grid.wrap_x" => state.grid.wrap_x().to_string(),
+        "grid.wrap_y" => state.grid.wrap_y().to_string(),
+        "windows.on_slot_conflict" => {
+            format!("{:?}", state.config.windows.on_slot_conflict).to_lowercase()
+        }
+        "windows.slot_adaptation" => state.config.windows.slot_adaptation.to_string(),
         _ => return format!("error: unknown option '{key}'"),
     };
     if json {
@@ -590,9 +689,9 @@ fn getoption_cmd(rest: &str, json: bool, state: &GlobalState) -> String {
 fn setprop_cmd(rest: &str, state: &mut GlobalState) -> String {
     // setprop <window_id> <prop> <value>
     let mut parts = rest.splitn(3, ' ');
-    let id_str  = parts.next().unwrap_or("");
-    let prop    = parts.next().unwrap_or("");
-    let value   = parts.next().unwrap_or("");
+    let id_str = parts.next().unwrap_or("");
+    let prop = parts.next().unwrap_or("");
+    let value = parts.next().unwrap_or("");
 
     let Ok(id) = id_str.parse::<u64>() else {
         return "error: invalid window id".into();
@@ -601,23 +700,47 @@ fn setprop_cmd(rest: &str, state: &mut GlobalState) -> String {
         return format!("error: window {id} not found");
     };
     match prop {
-        "is_urgent"              => { w.is_urgent      = value.parse().unwrap_or(false); "ok".into() }
-        "sticky" | "pin"         => { w.sticky         = value.parse().unwrap_or(false); "ok".into() }
-        "no_animations"          => { w.no_animations  = value.parse().unwrap_or(false); "ok".into() }
-        "steal_focus"            => { w.steal_focus     = value.parse().unwrap_or(false); "ok".into() }
-        "above_total_fullscreen" => { w.above_total_fullscreen = value.parse().unwrap_or(true);  "ok".into() }
-        "opacity" => {
-            match value.parse::<f32>() {
-                Ok(v) if (0.0..=1.0).contains(&v) => { w.opacity = v; "ok".into() }
-                _ => "error: opacity must be 0.0–1.0".into(),
-            }
+        "is_urgent" => {
+            w.is_urgent = value.parse().unwrap_or(false);
+            "ok".into()
         }
+        "sticky" | "pin" => {
+            w.sticky = value.parse().unwrap_or(false);
+            "ok".into()
+        }
+        "no_animations" => {
+            w.no_animations = value.parse().unwrap_or(false);
+            "ok".into()
+        }
+        "steal_focus" => {
+            w.steal_focus = value.parse().unwrap_or(false);
+            "ok".into()
+        }
+        "above_total_fullscreen" => {
+            w.above_total_fullscreen = value.parse().unwrap_or(true);
+            "ok".into()
+        }
+        "opacity" => match value.parse::<f32>() {
+            Ok(v) if (0.0..=1.0).contains(&v) => {
+                w.opacity = v;
+                "ok".into()
+            }
+            _ => "error: opacity must be 0.0–1.0".into(),
+        },
         "border_color" => {
-            w.border_color = if value.is_empty() { None } else { Some(value.to_owned()) };
+            w.border_color = if value.is_empty() {
+                None
+            } else {
+                Some(value.to_owned())
+            };
             "ok".into()
         }
         "shader" => {
-            w.shader = if value.is_empty() { None } else { Some(value.to_owned()) };
+            w.shader = if value.is_empty() {
+                None
+            } else {
+                Some(value.to_owned())
+            };
             "ok".into()
         }
         _ => format!("error: unknown property '{prop}'"),
@@ -631,12 +754,20 @@ fn session_cmd(rest: &str, json: bool, state: &mut GlobalState) -> String {
     match sub {
         "save" => {
             crate::session::save(state);
-            if json { r#"{"ok":true}"#.into() } else { "ok".into() }
+            if json {
+                r#"{"ok":true}"#.into()
+            } else {
+                "ok".into()
+            }
         }
         "clear" => {
             crate::session::clear();
             state.session = None;
-            if json { r#"{"ok":true}"#.into() } else { "ok".into() }
+            if json {
+                r#"{"ok":true}"#.into()
+            } else {
+                "ok".into()
+            }
         }
         "restore" => {
             // Reload session from disk; new windows will pick up the restored hints.
@@ -651,7 +782,10 @@ fn session_cmd(rest: &str, json: bool, state: &mut GlobalState) -> String {
         "status" => {
             let count = state.session.as_ref().map(|s| s.windows.len()).unwrap_or(0);
             if json {
-                format!(r#"{{"pending_restores":{count},"safe_mode":{}}}"#, state.safe_mode)
+                format!(
+                    r#"{{"pending_restores":{count},"safe_mode":{}}}"#,
+                    state.safe_mode
+                )
             } else {
                 format!("pending_restores={count} safe_mode={}", state.safe_mode)
             }
@@ -667,41 +801,62 @@ fn debug_cmd(rest: &str, json: bool, state: &mut GlobalState) -> String {
     match sub {
         "surfaces" | "tree" => {
             // Surface tree dump: list all windows with their state/slot info.
-            let entries: Vec<String> = state.grid.windows.values()
+            let entries: Vec<String> = state
+                .grid
+                .windows
+                .values()
                 .map(|w| {
                     if json {
                         format!(
                             r#"{{"id":{},"app_id":{},"state":"{:?}","slot":{:?},"ws":[{},{}]}}"#,
-                            w.id, serde_json::to_string(&w.app_id).unwrap_or_default(),
-                            w.current_state, w.current_slot.map(|s| format!("{s:?}")),
-                            w.workspace.0, w.workspace.1
+                            w.id,
+                            serde_json::to_string(&w.app_id).unwrap_or_default(),
+                            w.current_state,
+                            w.current_slot.map(|s| format!("{s:?}")),
+                            w.workspace.0,
+                            w.workspace.1
                         )
                     } else {
                         format!(
                             "id={} app={:?} state={:?} slot={:?} ws={},{}",
-                            w.id, w.app_id, w.current_state, w.current_slot, w.workspace.0, w.workspace.1
+                            w.id,
+                            w.app_id,
+                            w.current_state,
+                            w.current_slot,
+                            w.workspace.0,
+                            w.workspace.1
                         )
                     }
                 })
                 .collect();
-            if json { format!("[{}]", entries.join(",")) } else { entries.join("\n") }
+            if json {
+                format!("[{}]", entries.join(","))
+            } else {
+                entries.join("\n")
+            }
         }
         "fps" => {
             let uptime = state.clock.now().as_millis();
             if json {
-                format!(r#"{{"uptime_ms":{uptime},"output_size":[{},{}]}}"#,
-                    state.grid.output_w, state.grid.output_h)
+                format!(
+                    r#"{{"uptime_ms":{uptime},"output_size":[{},{}]}}"#,
+                    state.grid.output_w, state.grid.output_h
+                )
             } else {
-                format!("uptime={}ms output={}x{}", uptime, state.grid.output_w, state.grid.output_h)
+                format!(
+                    "uptime={}ms output={}x{}",
+                    uptime, state.grid.output_w, state.grid.output_h
+                )
             }
         }
         "safe_mode" => {
-            if json { format!(r#"{{"safe_mode":{}}}"#, state.safe_mode) }
-            else { format!("safe_mode={}", state.safe_mode) }
+            if json {
+                format!(r#"{{"safe_mode":{}}}"#, state.safe_mode)
+            } else {
+                format!("safe_mode={}", state.safe_mode)
+            }
         }
-        "" | "help" => {
-            "debug subcommands: surfaces|tree, fps, safe_mode".into()
-        }
+        "" | "help" => "debug subcommands: surfaces|tree, fps, safe_mode".into(),
         _ => format!("error: unknown debug subcommand '{sub}'. Use: surfaces, fps, safe_mode"),
     }
 }
@@ -722,8 +877,12 @@ fn notify_cmd(rest: &str, state: &mut GlobalState) -> String {
             .map(|s| s.success())
             .unwrap_or(true); // if busctl absent, assume daemon present
         if !reachable {
-            tracing::warn!("org.freedesktop.Notifications not reachable — emitting notification_daemon_missing");
-            state.pending_events.push(crate::ipc::events::Event::NotificationDaemonMissing);
+            tracing::warn!(
+                "org.freedesktop.Notifications not reachable — emitting notification_daemon_missing"
+            );
+            state
+                .pending_events
+                .push(crate::ipc::events::Event::NotificationDaemonMissing);
             state.show_osd("notification-daemon-missing");
         }
     }
@@ -753,20 +912,23 @@ fn cheatsheet_cmd(json: bool, state: &GlobalState) -> String {
         format!("[{}]", items.join(","))
     } else {
         // Human-readable table: combo → action
-        let lines: Vec<String> = entries.iter().map(|(mods, key, action, locked, global)| {
-            let combo = if mods.is_empty() {
-                key.clone()
-            } else {
-                format!("{mods}+{key}")
-            };
-            let flags = match (locked, global) {
-                (true, true)   => " [locked,global]",
-                (true, false)  => " [locked]",
-                (false, true)  => " [global]",
-                (false, false) => "",
-            };
-            format!("{combo:<30} {action}{flags}")
-        }).collect();
+        let lines: Vec<String> = entries
+            .iter()
+            .map(|(mods, key, action, locked, global)| {
+                let combo = if mods.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{mods}+{key}")
+                };
+                let flags = match (locked, global) {
+                    (true, true) => " [locked,global]",
+                    (true, false) => " [locked]",
+                    (false, true) => " [global]",
+                    (false, false) => "",
+                };
+                format!("{combo:<30} {action}{flags}")
+            })
+            .collect();
         lines.join("\n")
     }
 }
@@ -776,8 +938,10 @@ fn cheatsheet_cmd(json: bool, state: &GlobalState) -> String {
 fn shaders_cmd(json: bool, state: &GlobalState) -> String {
     let screen = state.screen_shader.as_deref().unwrap_or("");
     if json {
-        format!(r#"[{{"category":"screen","path":{}}}]"#,
-            serde_json::to_string(screen).unwrap_or_default())
+        format!(
+            r#"[{{"category":"screen","path":{}}}]"#,
+            serde_json::to_string(screen).unwrap_or_default()
+        )
     } else if screen.is_empty() {
         "screen: (none)".into()
     } else {
@@ -789,30 +953,47 @@ fn shaders_cmd(json: bool, state: &GlobalState) -> String {
 
 fn plugin_cmd(rest: &str, json: bool, state: &mut GlobalState) -> String {
     let mut parts = rest.splitn(2, ' ');
-    let sub  = parts.next().unwrap_or("").trim();
-    let arg  = parts.next().unwrap_or("").trim();
+    let sub = parts.next().unwrap_or("").trim();
+    let arg = parts.next().unwrap_or("").trim();
 
     match sub {
         "list" => {
             #[cfg(feature = "plugin-abi")]
             {
-                let items: Vec<String> = state.plugins.iter().map(|p| {
-                    let name = p.name();
-                    if json {
-                        format!(r#"{{"name":{}}}"#, serde_json::to_string(name).unwrap_or_default())
-                    } else {
-                        name.to_owned()
-                    }
-                }).collect();
-                if json { format!("[{}]", items.join(",")) } else { items.join("\n") }
+                let items: Vec<String> = state
+                    .plugins
+                    .iter()
+                    .map(|p| {
+                        let name = p.name();
+                        if json {
+                            format!(
+                                r#"{{"name":{}}}"#,
+                                serde_json::to_string(name).unwrap_or_default()
+                            )
+                        } else {
+                            name.to_owned()
+                        }
+                    })
+                    .collect();
+                if json {
+                    format!("[{}]", items.join(","))
+                } else {
+                    items.join("\n")
+                }
             }
             #[cfg(not(feature = "plugin-abi"))]
             {
-                if json { "[]".into() } else { "(plugins feature not enabled)".into() }
+                if json {
+                    "[]".into()
+                } else {
+                    "(plugins feature not enabled)".into()
+                }
             }
         }
         "load" => {
-            if arg.is_empty() { return "error: plugin load <path>".into(); }
+            if arg.is_empty() {
+                return "error: plugin load <path>".into();
+            }
             #[cfg(feature = "plugin-abi")]
             {
                 let cfg = crate::plugins::PluginConfig {
@@ -824,31 +1005,59 @@ fn plugin_cmd(rest: &str, json: bool, state: &mut GlobalState) -> String {
                     Ok(p) => {
                         let name = p.name().to_owned();
                         state.plugins.push(p);
-                        state.pending_events.push(crate::ipc::events::Event::PluginLoaded { name: name.clone() });
-                        if json { format!(r#"{{"ok":true,"name":{}}}"#, serde_json::to_string(&name).unwrap_or_default()) }
-                        else { format!("ok: loaded {name}") }
+                        state
+                            .pending_events
+                            .push(crate::ipc::events::Event::PluginLoaded { name: name.clone() });
+                        if json {
+                            format!(
+                                r#"{{"ok":true,"name":{}}}"#,
+                                serde_json::to_string(&name).unwrap_or_default()
+                            )
+                        } else {
+                            format!("ok: loaded {name}")
+                        }
                     }
                     Err(e) => {
-                        state.pending_events.push(crate::ipc::events::Event::PluginError { name: arg.to_owned(), message: e.clone() });
-                        if json { format!(r#"{{"ok":false,"error":{}}}"#, serde_json::to_string(&e).unwrap_or_default()) }
-                        else { format!("error: {e}") }
+                        state
+                            .pending_events
+                            .push(crate::ipc::events::Event::PluginError {
+                                name: arg.to_owned(),
+                                message: e.clone(),
+                            });
+                        if json {
+                            format!(
+                                r#"{{"ok":false,"error":{}}}"#,
+                                serde_json::to_string(&e).unwrap_or_default()
+                            )
+                        } else {
+                            format!("error: {e}")
+                        }
                     }
                 }
             }
             #[cfg(not(feature = "plugin-abi"))]
-            { "error: plugin-abi feature not compiled in".into() }
+            {
+                "error: plugin-abi feature not compiled in".into()
+            }
         }
         "unload" => {
-            if arg.is_empty() { return "error: plugin unload <name>".into(); }
+            if arg.is_empty() {
+                return "error: plugin unload <name>".into();
+            }
             #[cfg(feature = "plugin-abi")]
             {
                 let before = state.plugins.len();
                 state.plugins.retain(|p| p.name() != arg);
-                if state.plugins.len() < before { "ok".into() }
-                else { format!("error: plugin '{arg}' not found") }
+                if state.plugins.len() < before {
+                    "ok".into()
+                } else {
+                    format!("error: plugin '{arg}' not found")
+                }
             }
             #[cfg(not(feature = "plugin-abi"))]
-            { "error: plugin-abi feature not compiled in".into() }
+            {
+                "error: plugin-abi feature not compiled in".into()
+            }
         }
         _ => "error: plugin subcommands: list, load <path>, unload <name>".into(),
     }
@@ -889,20 +1098,20 @@ mod tests {
     #[test]
     fn slot_name_roundtrip() {
         use crate::grid::window::Slot;
-        assert_eq!(slot_name(Slot::HalfLeft),   "HalfLeft");
-        assert_eq!(slot_name(Slot::HalfRight),  "HalfRight");
-        assert_eq!(slot_name(Slot::QuarterTL),  "QuarterTL");
-        assert_eq!(slot_name(Slot::QuarterTR),  "QuarterTR");
-        assert_eq!(slot_name(Slot::QuarterBL),  "QuarterBL");
-        assert_eq!(slot_name(Slot::QuarterBR),  "QuarterBR");
+        assert_eq!(slot_name(Slot::HalfLeft), "HalfLeft");
+        assert_eq!(slot_name(Slot::HalfRight), "HalfRight");
+        assert_eq!(slot_name(Slot::QuarterTL), "QuarterTL");
+        assert_eq!(slot_name(Slot::QuarterTR), "QuarterTR");
+        assert_eq!(slot_name(Slot::QuarterBL), "QuarterBL");
+        assert_eq!(slot_name(Slot::QuarterBR), "QuarterBR");
     }
 
     #[test]
     fn state_name_roundtrip() {
         use crate::grid::window::WindowState;
-        assert_eq!(state_name(WindowState::Tiled),           "Tiled");
-        assert_eq!(state_name(WindowState::Floating),        "Floating");
-        assert_eq!(state_name(WindowState::Fullscreen),      "Fullscreen");
+        assert_eq!(state_name(WindowState::Tiled), "Tiled");
+        assert_eq!(state_name(WindowState::Floating), "Floating");
+        assert_eq!(state_name(WindowState::Fullscreen), "Fullscreen");
         assert_eq!(state_name(WindowState::TotalFullscreen), "TotalFullscreen");
     }
 }

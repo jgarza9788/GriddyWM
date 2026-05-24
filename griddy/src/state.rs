@@ -12,23 +12,20 @@ use smithay::{
         compositor::{CompositorClientState, CompositorState},
         content_type::ContentTypeState,
         cursor_shape::CursorShapeManagerState,
+        foreign_toplevel_list::{ForeignToplevelHandle, ForeignToplevelListState},
         fractional_scale::FractionalScaleManagerState,
         idle_inhibit::IdleInhibitManagerState,
         keyboard_shortcuts_inhibit::KeyboardShortcutsInhibitState,
         output::OutputManagerState,
-        foreign_toplevel_list::{ForeignToplevelHandle, ForeignToplevelListState},
         pointer_constraints::PointerConstraintsState,
         pointer_gestures::PointerGesturesState,
         presentation::PresentationState,
         relative_pointer::RelativePointerManagerState,
-        selection::{
-            data_device::DataDeviceState,
-            wlr_data_control::DataControlState,
-        },
+        selection::{data_device::DataDeviceState, wlr_data_control::DataControlState},
         session_lock::{LockSurface, SessionLockManagerState, SessionLocker},
         shell::{
             wlr_layer::{Layer, LayerSurface, WlrLayerShellState},
-            xdg::{decoration::XdgDecorationState, XdgShellState},
+            xdg::{XdgShellState, decoration::XdgDecorationState},
         },
         shm::ShmState,
         single_pixel_buffer::SinglePixelBufferState,
@@ -42,16 +39,19 @@ use wayland_server::backend::ClientData as WlClientData;
 
 use crate::animate::{MoveAnim, WindowAnim, WorkspaceSlide};
 use crate::config::Config;
-use crate::grid::{window::WindowId, Grid};
+use crate::grid::{Grid, window::WindowId};
 use crate::handlers::foreign_toplevel::WlrForeignToplevelState;
 use crate::handlers::workspace_protocol::ExtWorkspaceState;
-use crate::ipc::{events::Event, IpcServer};
+use crate::ipc::{IpcServer, events::Event};
 use crate::keybind::{BindTable, SubBindTable};
 
 // ─── Drag state ───────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DragKind { Move, Resize }
+pub enum DragKind {
+    Move,
+    Resize,
+}
 
 /// Active pointer-drag on a floating or tiled window.
 #[derive(Debug, Clone)]
@@ -262,7 +262,6 @@ pub struct GlobalState {
     pub applied_templates: std::collections::HashSet<(u8, u8)>,
 
     // ── Overview navigation (§7.2) ────────────────────────────────────────────
-
     /// Index into `visible_windows_for_ws(overview_focused)` of the Tab-selected window.
     pub overview_window_idx: usize,
 
@@ -380,7 +379,8 @@ impl GlobalState {
         let content_type_state = ContentTypeState::new::<GlobalState>(&dh);
         let data_control_state = DataControlState::new::<GlobalState, _>(&dh, None, |_| true);
         let pointer_gestures_state = PointerGesturesState::new::<GlobalState>(&dh);
-        let keyboard_shortcuts_inhibit_state = KeyboardShortcutsInhibitState::new::<GlobalState>(&dh);
+        let keyboard_shortcuts_inhibit_state =
+            KeyboardShortcutsInhibitState::new::<GlobalState>(&dh);
         let session_lock_state = SessionLockManagerState::new::<GlobalState, _>(&dh, |_| true);
         let xwayland_shell_state = XWaylandShellState::new::<GlobalState>(&dh);
 
@@ -388,13 +388,21 @@ impl GlobalState {
         smithay::wayland::text_input::TextInputManagerState::new::<GlobalState>(&dh);
 
         // input-method-v2 (§22.18 IME): zwp_input_method_manager_v2 for IME engines.
-        smithay::wayland::input_method::InputMethodManagerState::new::<GlobalState, _>(&dh, |_| true);
+        smithay::wayland::input_method::InputMethodManagerState::new::<GlobalState, _>(&dh, |_| {
+            true
+        });
 
         // security-context-v1 (§16): wp_security_context_manager_v1 for sandboxed clients.
-        smithay::wayland::security_context::SecurityContextState::new::<GlobalState, _>(&dh, |_| true);
+        smithay::wayland::security_context::SecurityContextState::new::<GlobalState, _>(
+            &dh,
+            |_| true,
+        );
 
         // virtual-keyboard-unstable-v1 (§22.9): wtype, ydotool, on-screen keyboards.
-        smithay::wayland::virtual_keyboard::VirtualKeyboardManagerState::new::<GlobalState, _>(&dh, |_| true);
+        smithay::wayland::virtual_keyboard::VirtualKeyboardManagerState::new::<GlobalState, _>(
+            &dh,
+            |_| true,
+        );
 
         // tablet-v2 (§22.9): Wacom/Huion tablet tools.
         smithay::wayland::tablet_manager::TabletManagerState::new::<GlobalState>(&dh);
@@ -409,9 +417,8 @@ impl GlobalState {
         // and wp-tearing-control-v1.
         dh.create_global::<GlobalState, wayland_protocols_wlr::foreign_toplevel::v1::server::zwlr_foreign_toplevel_manager_v1::ZwlrForeignToplevelManagerV1, ()>(3, ());
         dh.create_global::<GlobalState, wayland_protocols::ext::workspace::v1::server::ext_workspace_manager_v1::ExtWorkspaceManagerV1, ()>(1, ());
-        let wlr_output_manager_state = Some(
-            crate::handlers::output_management::WlrOutputManagerState::new(&dh)
-        );
+        let wlr_output_manager_state =
+            Some(crate::handlers::output_management::WlrOutputManagerState::new(&dh));
         crate::handlers::tearing_control::TearingControlManagerState::new(&dh);
         crate::handlers::screencopy::WlrScreencopyState::new(&dh);
         crate::handlers::fifo::WpFifoManagerState::new(&dh);
@@ -426,9 +433,17 @@ impl GlobalState {
                 model: "Virtual".to_owned(),
             },
         );
-        let mode = OutputMode { size: (1920, 1080).into(), refresh: 60_000 };
+        let mode = OutputMode {
+            size: (1920, 1080).into(),
+            refresh: 60_000,
+        };
         output.set_preferred(mode);
-        output.change_current_state(Some(mode), Some(Transform::Normal), None, Some((0, 0).into()));
+        output.change_current_state(
+            Some(mode),
+            Some(Transform::Normal),
+            None,
+            Some((0, 0).into()),
+        );
         output.create_global::<GlobalState>(&dh);
 
         let mut seat_state = SeatState::new();
@@ -461,7 +476,8 @@ impl GlobalState {
         };
 
         // Parse pointer-constraint break key (§8.11) from config.
-        let constraint_break_key = parse_constraint_break_key(&config.input.pointer_constraint_break_key);
+        let constraint_break_key =
+            parse_constraint_break_key(&config.input.pointer_constraint_break_key);
 
         let submap_tables =
             crate::keybind::build_submap_tables(&config.submaps, &config.input.mod_key);
@@ -507,7 +523,11 @@ impl GlobalState {
         };
 
         // Load session state for restore-on-startup (§22.1).
-        let session = if safe_mode { None } else { crate::session::load() };
+        let session = if safe_mode {
+            None
+        } else {
+            crate::session::load()
+        };
 
         // Start IPC server; export instance signature to child processes (§12).
         let instance_sig = format!("griddy_{}", std::process::id());
@@ -525,9 +545,13 @@ impl GlobalState {
             }
         };
 
-        let initial_screen_shader = if config.shaders.screen.is_empty() { None }
-            else { Some(config.shaders.screen.clone()) };
-        let initial_workspace_synced = config.grid.workspace_sync == crate::config::types::WorkspaceSyncMode::Synced;
+        let initial_screen_shader = if config.shaders.screen.is_empty() {
+            None
+        } else {
+            Some(config.shaders.screen.clone())
+        };
+        let initial_workspace_synced =
+            config.grid.workspace_sync == crate::config::types::WorkspaceSyncMode::Synced;
         let initial_overview = config.view.default_mode == crate::config::types::ViewMode::Overview;
 
         let mut griddy_state = GlobalState {
@@ -749,8 +773,10 @@ impl GlobalState {
                 if image.is_empty() {
                     format!("swaybg --color '{}'", wp.bg_color)
                 } else {
-                    format!("swaybg --image '{}' --mode {} --color '{}'",
-                        image, wp.mode, wp.bg_color)
+                    format!(
+                        "swaybg --image '{}' --mode {} --color '{}'",
+                        image, wp.mode, wp.bg_color
+                    )
                 }
             }
             "swww" => {
@@ -761,7 +787,9 @@ impl GlobalState {
             }
             "hyprpaper" => "hyprpaper".into(),
             "mpvpaper" => {
-                if image.is_empty() { return; }
+                if image.is_empty() {
+                    return;
+                }
                 format!("mpvpaper '*' '{}' --mpv-options='loop'", image)
             }
             other => other.to_owned(), // custom command passed verbatim
@@ -773,14 +801,18 @@ impl GlobalState {
     /// Read `~/.config/autostart/*.desktop` and spawn eligible entries (§8 startup).
     pub fn run_xdg_autostart(&self) {
         let autostart_dir = dirs_xdg_autostart();
-        let Ok(entries) = std::fs::read_dir(&autostart_dir) else { return };
+        let Ok(entries) = std::fs::read_dir(&autostart_dir) else {
+            return;
+        };
 
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) != Some("desktop") {
                 continue;
             }
-            let Ok(content) = std::fs::read_to_string(&path) else { continue };
+            let Ok(content) = std::fs::read_to_string(&path) else {
+                continue;
+            };
 
             let mut app_type = String::new();
             let mut exec = String::new();
@@ -847,12 +879,12 @@ impl GlobalState {
     /// Check whether the config file has changed on disk. If so (or if `force`
     /// is true), attempt to reload and apply the new config non-destructively.
     pub fn reload_config_if_changed(&mut self, force: bool) {
-        let Some(path) = self.config_path.clone() else { return };
+        let Some(path) = self.config_path.clone() else {
+            return;
+        };
 
         // Check file mtime.
-        let current_mtime = std::fs::metadata(&path)
-            .and_then(|m| m.modified())
-            .ok();
+        let current_mtime = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
 
         if !force && current_mtime == self.config_mtime {
             return;
@@ -885,9 +917,8 @@ impl GlobalState {
                     &new_config.input.mod_key,
                 );
                 // Update constraint break key.
-                self.constraint_break_key = parse_constraint_break_key(
-                    &new_config.input.pointer_constraint_break_key
-                );
+                self.constraint_break_key =
+                    parse_constraint_break_key(&new_config.input.pointer_constraint_break_key);
                 // Exit any active submap (bind layout may have changed).
                 self.active_submap = None;
                 // Apply gap + layout settings to the live grid.
@@ -900,13 +931,17 @@ impl GlobalState {
                 self.config = new_config;
                 // Update stored mtime.
                 self.config_mtime = current_mtime;
-                self.pending_events.push(Event::ConfigReloaded { which: "all".into() });
+                self.pending_events.push(Event::ConfigReloaded {
+                    which: "all".into(),
+                });
                 self.show_osd("reload-ok");
                 tracing::info!("Config reloaded successfully");
             }
             Err(e) => {
                 tracing::warn!("Config reload failed (keeping previous): {e}");
-                self.pending_events.push(Event::ConfigError { message: e.to_string() });
+                self.pending_events.push(Event::ConfigError {
+                    message: e.to_string(),
+                });
                 self.show_osd("reload-err");
                 // Still update the mtime so we don't spam retries on a broken file.
                 self.config_mtime = current_mtime;
@@ -921,7 +956,9 @@ impl GlobalState {
 
     /// Reload only theme.toml without rebuilding keybinds or rules.
     pub fn reload_theme(&mut self) {
-        let Some(config_path) = &self.config_path else { return };
+        let Some(config_path) = &self.config_path else {
+            return;
+        };
         let theme_path = match config_path.parent() {
             Some(dir) => dir.join("theme.toml"),
             None => return,
@@ -933,14 +970,21 @@ impl GlobalState {
         match crate::config::load_theme_file(&theme_path) {
             Ok(theme) => {
                 self.config.theme = theme;
-                self.pending_events.push(crate::ipc::events::Event::ConfigReloaded { which: "theme".into() });
-                self.pending_events.push(crate::ipc::events::Event::ThemeReloaded);
+                self.pending_events
+                    .push(crate::ipc::events::Event::ConfigReloaded {
+                        which: "theme".into(),
+                    });
+                self.pending_events
+                    .push(crate::ipc::events::Event::ThemeReloaded);
                 self.show_osd("reload-ok");
                 tracing::info!("Theme reloaded from {}", theme_path.display());
             }
             Err(e) => {
                 tracing::warn!("Failed to reload theme.toml: {e}");
-                self.pending_events.push(crate::ipc::events::Event::ConfigError { message: e.to_string() });
+                self.pending_events
+                    .push(crate::ipc::events::Event::ConfigError {
+                        message: e.to_string(),
+                    });
                 self.show_osd("reload-err");
             }
         }
@@ -950,12 +994,14 @@ impl GlobalState {
     /// commands for any timers that had previously fired.
     /// Show the OSD for the configured duration (§8.9).
     pub fn show_osd(&mut self, kind: impl Into<String>) {
-        if !self.config.theme.osd.enabled { return; }
+        if !self.config.theme.osd.enabled {
+            return;
+        }
         let kind = kind.into();
         // Check per-kind feature flags before showing.
         match kind.as_str() {
             "workspace" if !self.config.theme.osd.workspace_indicator => return,
-            "submap"    if !self.config.theme.osd.submap_indicator    => return,
+            "submap" if !self.config.theme.osd.submap_indicator => return,
             "reload-ok" | "reload-err" if !self.config.theme.osd.reload_indicator => return,
             _ => {}
         }
@@ -965,14 +1011,20 @@ impl GlobalState {
     }
 
     pub fn reset_idle(&mut self) {
-        if !self.config.idle.enabled { return; }
+        if !self.config.idle.enabled {
+            return;
+        }
         let was_idle = self.idle_timers_fired.iter().any(|&f| f);
         if !was_idle {
             self.last_input_instant = std::time::Instant::now();
             return;
         }
         // Fire on_resume for all previously-fired timers (in reverse order).
-        let resumes: Vec<(u64, String)> = self.config.idle.timeouts.iter()
+        let resumes: Vec<(u64, String)> = self
+            .config
+            .idle
+            .timeouts
+            .iter()
             .enumerate()
             .filter(|(i, _)| self.idle_timers_fired.get(*i).copied().unwrap_or(false))
             .map(|(_, t)| (t.after_seconds, t.on_resume.clone()))
@@ -981,10 +1033,14 @@ impl GlobalState {
             if !cmd.is_empty() {
                 exec_idle_cmd(&cmd);
             }
-            self.pending_events.push(Event::IdleResume { after_seconds: secs });
+            self.pending_events.push(Event::IdleResume {
+                after_seconds: secs,
+            });
         }
         // Reset all fired flags and clock.
-        for f in &mut self.idle_timers_fired { *f = false; }
+        for f in &mut self.idle_timers_fired {
+            *f = false;
+        }
         self.last_input_instant = std::time::Instant::now();
     }
 
@@ -1003,7 +1059,9 @@ impl GlobalState {
     }
 
     pub fn tick_idle(&mut self) {
-        if !self.config.idle.enabled { return; }
+        if !self.config.idle.enabled {
+            return;
+        }
         // Honor idle-inhibit clients.
         if self.config.idle.inhibitors.honor_app_inhibits && self.idle_inhibit_count > 0 {
             return;
@@ -1020,7 +1078,9 @@ impl GlobalState {
                 if !timeout.on_timeout.is_empty() {
                     exec_idle_cmd(&timeout.on_timeout);
                 }
-                self.pending_events.push(Event::IdleTimeout { after_seconds: timeout.after_seconds });
+                self.pending_events.push(Event::IdleTimeout {
+                    after_seconds: timeout.after_seconds,
+                });
                 tracing::debug!(after_seconds = timeout.after_seconds, "Idle timeout fired");
             }
         }
@@ -1034,8 +1094,8 @@ impl GlobalState {
 fn exec_idle_cmd(cmd: &str) {
     match cmd {
         "dpms off" => tracing::info!("DPMS off (no-op on winit backend)"),
-        "dpms on"  => tracing::info!("DPMS on (no-op on winit backend)"),
-        other      => spawn_cmd(other),
+        "dpms on" => tracing::info!("DPMS on (no-op on winit backend)"),
+        other => spawn_cmd(other),
     }
 }
 
@@ -1072,14 +1132,16 @@ fn parse_constraint_break_key(s: &str) -> Option<(u32, u32)> {
     for mod_str in &parts[..parts.len().saturating_sub(1)] {
         match *mod_str {
             "Super" | "Logo" => mods_mask |= 1,
-            "Alt"            => mods_mask |= 2,
+            "Alt" => mods_mask |= 2,
             "Ctrl" | "Control" => mods_mask |= 4,
-            "Shift"          => mods_mask |= 8,
+            "Shift" => mods_mask |= 8,
             _ => {}
         }
     }
     let sym = xkb::keysym_from_name(key_name, xkb::KEYSYM_NO_FLAGS);
-    if sym.raw() == 0 { return None; }
+    if sym.raw() == 0 {
+        return None;
+    }
     Some((sym.raw(), mods_mask))
 }
 

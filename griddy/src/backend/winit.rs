@@ -16,33 +16,27 @@ use anyhow::{Context, Result};
 use smithay::{
     backend::{
         input::{
-            AbsolutePositionEvent, Axis, ButtonState, Event, InputEvent,
-            KeyboardKeyEvent, KeyState, PointerAxisEvent, PointerButtonEvent,
-            TouchEvent,
+            AbsolutePositionEvent, Axis, ButtonState, Event, InputEvent, KeyState,
+            KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, TouchEvent,
         },
         renderer::{
+            Color32F, Frame, Renderer,
             element::{
-                surface::{render_elements_from_surface_tree, WaylandSurfaceRenderElement},
                 Kind,
+                surface::{WaylandSurfaceRenderElement, render_elements_from_surface_tree},
             },
             gles::GlesRenderer,
             utils::draw_render_elements,
-            Color32F, Frame, Renderer,
         },
         winit::{self, WinitEvent},
     },
     input::{
         keyboard::FilterResult,
-        pointer::{
-            AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent,
-        },
+        pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
         touch::{DownEvent as TouchDownEvt, MotionEvent as TouchMotionEvt, UpEvent as TouchUpEvt},
     },
-    reexports::{
-        calloop::EventLoop,
-        wayland_server::protocol::wl_surface::WlSurface,
-    },
-    utils::{Logical, Physical, Point, Rectangle, Transform, SERIAL_COUNTER},
+    reexports::{calloop::EventLoop, wayland_server::protocol::wl_surface::WlSurface},
+    utils::{Logical, Physical, Point, Rectangle, SERIAL_COUNTER, Transform},
     wayland::{
         keyboard_shortcuts_inhibit::KeyboardShortcutsInhibitorSeat,
         shell::wlr_layer::{Layer, LayerSurfaceCachedState},
@@ -55,36 +49,35 @@ use crate::grid::window::{Slot, WindowState};
 use crate::handlers::layer_shell::layer_rect;
 use crate::ipc::commands;
 use crate::ipc::events::Event as IpcEvent;
-use crate::keybind::dispatcher;
 use crate::keybind::Action;
+use crate::keybind::dispatcher;
 use crate::state::{ClientData, DragKind, DragState, GlobalState};
 
-
 // Overview gap and margin constants (§7.2, §overview_config).
-const OV_GAP_PX: i32    = 16;
+const OV_GAP_PX: i32 = 16;
 const OV_MARGIN_PX: i32 = 32;
 
 // Minimap constants (§7.4).
-const MM_CELL_PX: i32  = 14;
-const MM_GAP_PX: i32   = 3;
+const MM_CELL_PX: i32 = 14;
+const MM_GAP_PX: i32 = 3;
 const MM_MARGIN_PX: i32 = 16;
 
 // XKB keysym constants used for overview keyboard navigation.
-const XKB_KEY_LEFT    : u32 = 0xff51;
-const XKB_KEY_RIGHT   : u32 = 0xff53;
-const XKB_KEY_UP      : u32 = 0xff52;
-const XKB_KEY_DOWN    : u32 = 0xff54;
-const XKB_KEY_RETURN  : u32 = 0xff0d;
+const XKB_KEY_LEFT: u32 = 0xff51;
+const XKB_KEY_RIGHT: u32 = 0xff53;
+const XKB_KEY_UP: u32 = 0xff52;
+const XKB_KEY_DOWN: u32 = 0xff54;
+const XKB_KEY_RETURN: u32 = 0xff0d;
 const XKB_KEY_KP_ENTER: u32 = 0xff8d;
-const XKB_KEY_ESCAPE  : u32 = 0xff1b;
-const XKB_KEY_TAB     : u32 = 0xff09;
-const XKB_KEY_SPACE   : u32 = 0x0020;
+const XKB_KEY_ESCAPE: u32 = 0xff1b;
+const XKB_KEY_TAB: u32 = 0xff09;
+const XKB_KEY_SPACE: u32 = 0x0020;
 
 /// How often to check the config file for changes.
 const CONFIG_CHECK_INTERVAL: Duration = Duration::from_millis(500);
 
 /// Mouse button codes.
-const BTN_LEFT:  u32 = 272;
+const BTN_LEFT: u32 = 272;
 const BTN_RIGHT: u32 = 273;
 
 pub fn run(
@@ -119,7 +112,9 @@ pub fn run(
         size: (output_size.w, output_size.h).into(),
         refresh: 60_000,
     };
-    state.output.change_current_state(Some(mode), None, None, Some((0, 0).into()));
+    state
+        .output
+        .change_current_state(Some(mode), None, None, Some((0, 0).into()));
 
     // ── XWayland ─────────────────────────────────────────────────────────────
     if !no_xwayland {
@@ -136,30 +131,44 @@ pub fn run(
         ) {
             Ok((xwayland, xw_client)) => {
                 state.xwayland_client = Some(xw_client);
-                if let Err(e) = lh.insert_source(xwayland, move |event, _, state: &mut GlobalState| {
-                    use smithay::xwayland::{XWaylandEvent, X11Wm};
-                    match event {
-                        XWaylandEvent::Ready { x11_socket, display_number, .. } => {
-                            let client = state.xwayland_client.take()
-                                .expect("xwayland_client already taken");
-                            match X11Wm::start_wm(lh_for_wm.clone(), x11_socket, client) {
-                                Ok(wm) => {
-                                    state.x11_wm = Some(wm);
-                                    unsafe {
-                                        std::env::set_var("DISPLAY", format!(":{}", display_number));
+                if let Err(e) =
+                    lh.insert_source(xwayland, move |event, _, state: &mut GlobalState| {
+                        use smithay::xwayland::{X11Wm, XWaylandEvent};
+                        match event {
+                            XWaylandEvent::Ready {
+                                x11_socket,
+                                display_number,
+                                ..
+                            } => {
+                                let client = state
+                                    .xwayland_client
+                                    .take()
+                                    .expect("xwayland_client already taken");
+                                match X11Wm::start_wm(lh_for_wm.clone(), x11_socket, client) {
+                                    Ok(wm) => {
+                                        state.x11_wm = Some(wm);
+                                        unsafe {
+                                            std::env::set_var(
+                                                "DISPLAY",
+                                                format!(":{}", display_number),
+                                            );
+                                        }
+                                        tracing::info!(
+                                            "XWayland ready on DISPLAY=:{}",
+                                            display_number
+                                        );
                                     }
-                                    tracing::info!("XWayland ready on DISPLAY=:{}", display_number);
+                                    Err(e) => tracing::error!("X11Wm::start_wm failed: {e}"),
                                 }
-                                Err(e) => tracing::error!("X11Wm::start_wm failed: {e}"),
+                            }
+                            XWaylandEvent::Error => {
+                                tracing::warn!("XWayland exited/errored");
+                                state.x11_wm = None;
+                                state.xwayland_surfaces.clear();
                             }
                         }
-                        XWaylandEvent::Error => {
-                            tracing::warn!("XWayland exited/errored");
-                            state.x11_wm = None;
-                            state.xwayland_surfaces.clear();
-                        }
-                    }
-                }) {
+                    })
+                {
                     tracing::warn!("Failed to register XWayland event source: {e}");
                 }
             }
@@ -170,9 +179,10 @@ pub fn run(
     // ── ext-idle-notify-v1 ───────────────────────────────────────────────────
     {
         let lh = event_loop.handle();
-        state.idle_notifier_state = Some(
-            smithay::wayland::idle_notify::IdleNotifierState::new(&display.handle(), lh),
-        );
+        state.idle_notifier_state = Some(smithay::wayland::idle_notify::IdleNotifierState::new(
+            &display.handle(),
+            lh,
+        ));
     }
 
     // ── SIGUSR1 → force config reload ────────────────────────────────────────
@@ -180,10 +190,14 @@ pub fn run(
         use smithay::reexports::calloop::signals::{Signal, Signals};
         match Signals::new(&[Signal::SIGUSR1]) {
             Ok(sig_src) => {
-                if let Err(e) = event_loop.handle().insert_source(sig_src, |_, _, state: &mut GlobalState| {
-                    tracing::info!("SIGUSR1: reloading config");
-                    state.reload_config_if_changed(true);
-                }) {
+                if let Err(e) =
+                    event_loop
+                        .handle()
+                        .insert_source(sig_src, |_, _, state: &mut GlobalState| {
+                            tracing::info!("SIGUSR1: reloading config");
+                            state.reload_config_if_changed(true);
+                        })
+                {
                     tracing::warn!("Failed to register SIGUSR1 source: {e}");
                 }
             }
@@ -233,7 +247,9 @@ pub fn run(
                 size: (output_size.w, output_size.h).into(),
                 refresh: 60_000,
             };
-            state.output.change_current_state(Some(mode), None, None, None);
+            state
+                .output
+                .change_current_state(Some(mode), None, None, None);
         }
 
         // Advance / expire slide animation
@@ -266,12 +282,17 @@ pub fn run(
         // In overview or overview-peek mode we don't render individual window surfaces.
         let in_overview = state.is_overview || state.is_overview_peeking;
         let render_items: Vec<RenderItem> = if !in_overview {
-            let new_offset = state.slide_anim.as_ref()
+            let new_offset = state
+                .slide_anim
+                .as_ref()
                 .map(|a| a.new_ws_offset(state.grid.output_w, state.grid.output_h))
                 .unwrap_or((0, 0));
 
             let old_info = state.slide_anim.as_ref().map(|a| {
-                (a.old_workspace, a.old_ws_offset(state.grid.output_w, state.grid.output_h))
+                (
+                    a.old_workspace,
+                    a.old_ws_offset(state.grid.output_w, state.grid.output_h),
+                )
             });
 
             let focused_id = state.grid.focused_window;
@@ -279,13 +300,17 @@ pub fn run(
 
             if let Some((old_ws, old_off)) = old_info {
                 for (w, r) in state.grid.visible_windows_for_ws(old_ws) {
-                    let stack_depth = w.current_slot
+                    let stack_depth = w
+                        .current_slot
                         .map(|s| state.grid.slot_stack_ids(w.workspace, s).len())
                         .unwrap_or(1);
                     items.push(RenderItem {
                         surface: w.surface.wl_surface().clone(),
                         rect: crate::grid::window::Rect::new(
-                            r.x + old_off.0, r.y + old_off.1, r.w, r.h,
+                            r.x + old_off.0,
+                            r.y + old_off.1,
+                            r.w,
+                            r.h,
                         ),
                         window_id: w.id,
                         is_focused: focused_id == Some(w.id),
@@ -304,10 +329,13 @@ pub fn run(
             let mut seen_ids = std::collections::HashSet::new();
             for (w, r) in state.grid.visible_windows() {
                 seen_ids.insert(w.id);
-                let effective_rect = state.move_anims.get(&w.id)
+                let effective_rect = state
+                    .move_anims
+                    .get(&w.id)
                     .map(|ma| ma.lerp_rect(r))
                     .unwrap_or(r);
-                let stack_depth = w.current_slot
+                let stack_depth = w
+                    .current_slot
                     .map(|s| state.grid.slot_stack_ids(w.workspace, s).len())
                     .unwrap_or(1);
                 items.push(RenderItem {
@@ -334,7 +362,9 @@ pub fn run(
             for w in state.grid.windows.values() {
                 if w.sticky && !seen_ids.contains(&w.id) && !w.is_swallowed {
                     if let Some(r) = state.grid.compute_rect(w.id) {
-                        let effective_rect = state.move_anims.get(&w.id)
+                        let effective_rect = state
+                            .move_anims
+                            .get(&w.id)
                             .map(|ma| ma.lerp_rect(r))
                             .unwrap_or(r);
                         items.push(RenderItem {
@@ -375,7 +405,9 @@ pub fn run(
             }
             surfs
         } else {
-            let mut surfs: Vec<WlSurface> = state.grid.visible_windows()
+            let mut surfs: Vec<WlSurface> = state
+                .grid
+                .visible_windows()
                 .iter()
                 .map(|(w, _)| w.surface.wl_surface().clone())
                 .collect();
@@ -387,17 +419,17 @@ pub fn run(
             surfs
         };
 
-        let border_focused   = state.config.theme.window.focused.border_px;
+        let border_focused = state.config.theme.window.focused.border_px;
         let border_unfocused = state.config.theme.window.unfocused.border_px;
-        let accent     = parse_hex_color(&state.config.theme.colors.accent);
+        let accent = parse_hex_color(&state.config.theme.colors.accent);
         let accent_dim = parse_hex_color(&state.config.theme.colors.accent_dim);
-        let idle       = parse_hex_color(&state.config.theme.colors.border_idle);
-        let warn       = parse_hex_color(&state.config.theme.colors.warn);
-        let fg_dim     = parse_hex_color(&state.config.theme.colors.fg_dim);
-        let bg         = parse_hex_color(&state.config.theme.colors.bg);
-        let bg_alt     = parse_hex_color(&state.config.theme.colors.bg_alt);
-        let ok_color   = parse_hex_color(&state.config.theme.colors.ok);
-        let danger     = parse_hex_color(&state.config.theme.colors.danger);
+        let idle = parse_hex_color(&state.config.theme.colors.border_idle);
+        let warn = parse_hex_color(&state.config.theme.colors.warn);
+        let fg_dim = parse_hex_color(&state.config.theme.colors.fg_dim);
+        let bg = parse_hex_color(&state.config.theme.colors.bg);
+        let bg_alt = parse_hex_color(&state.config.theme.colors.bg_alt);
+        let ok_color = parse_hex_color(&state.config.theme.colors.ok);
+        let danger = parse_hex_color(&state.config.theme.colors.danger);
 
         {
             let (renderer, mut framebuffer) = backend
@@ -417,36 +449,47 @@ pub fn run(
                 /// Rule-overridden border color (RGBA floats), if any.
                 override_border: Option<[f32; 4]>,
             }
-            let window_data: Vec<WindowRenderData> = render_items.iter().map(|item| {
-                let bpx = if item.is_focused { border_focused } else { border_unfocused };
-                let anim_alpha = state.open_anims.get(&item.window_id)
-                    .and_then(|a| a.progress())
-                    .unwrap_or(1.0);
-                // Multiply animation alpha by per-window opacity from rules.
-                let alpha = (anim_alpha * item.opacity).clamp(0.0, 1.0);
-                let elements = render_elements_from_surface_tree(
-                    renderer,
-                    &item.surface,
-                    (item.rect.x, item.rect.y),
-                    1.0,
-                    alpha,
-                    Kind::Unspecified,
-                );
-                let override_border = item.border_color.as_deref()
-                    .map(parse_hex_color)
-                    .map(|c| [c[0], c[1], c[2], alpha]);
-                WindowRenderData {
-                    elements,
-                    rect: item.rect,
-                    is_focused: item.is_focused,
-                    is_fullscreen: item.is_fullscreen,
-                    is_urgent: item.is_urgent,
-                    border_px: bpx,
-                    alpha,
-                    stack_depth: item.stack_depth,
-                    override_border,
-                }
-            }).collect();
+            let window_data: Vec<WindowRenderData> = render_items
+                .iter()
+                .map(|item| {
+                    let bpx = if item.is_focused {
+                        border_focused
+                    } else {
+                        border_unfocused
+                    };
+                    let anim_alpha = state
+                        .open_anims
+                        .get(&item.window_id)
+                        .and_then(|a| a.progress())
+                        .unwrap_or(1.0);
+                    // Multiply animation alpha by per-window opacity from rules.
+                    let alpha = (anim_alpha * item.opacity).clamp(0.0, 1.0);
+                    let elements = render_elements_from_surface_tree(
+                        renderer,
+                        &item.surface,
+                        (item.rect.x, item.rect.y),
+                        1.0,
+                        alpha,
+                        Kind::Unspecified,
+                    );
+                    let override_border = item
+                        .border_color
+                        .as_deref()
+                        .map(parse_hex_color)
+                        .map(|c| [c[0], c[1], c[2], alpha]);
+                    WindowRenderData {
+                        elements,
+                        rect: item.rect,
+                        is_focused: item.is_focused,
+                        is_fullscreen: item.is_fullscreen,
+                        is_urgent: item.is_urgent,
+                        border_px: bpx,
+                        alpha,
+                        stack_depth: item.stack_depth,
+                        override_border,
+                    }
+                })
+                .collect();
 
             // Phase 1b: layer surface elements (Top + Overlay rendered in both modes).
             struct LayerRenderData {
@@ -456,24 +499,38 @@ pub fn run(
             let layer_data: Vec<LayerRenderData> = {
                 let ow = state.grid.output_w;
                 let oh = state.grid.output_h;
-                state.layer_surfaces.iter().filter_map(|m| {
-                    if !m.surface.alive() { return None; }
-                    let cached = smithay::wayland::compositor::with_states(
-                        m.surface.wl_surface(), |states| {
-                            states.cached_state.get::<LayerSurfaceCachedState>().current().clone()
+                state
+                    .layer_surfaces
+                    .iter()
+                    .filter_map(|m| {
+                        if !m.surface.alive() {
+                            return None;
                         }
-                    );
-                    let r = layer_rect(&cached, ow, oh);
-                    let elements = render_elements_from_surface_tree(
-                        renderer,
-                        m.surface.wl_surface(),
-                        (r.x, r.y),
-                        1.0,
-                        1.0f32,
-                        Kind::Unspecified,
-                    );
-                    Some(LayerRenderData { elements, layer: m.layer.clone() })
-                }).collect()
+                        let cached = smithay::wayland::compositor::with_states(
+                            m.surface.wl_surface(),
+                            |states| {
+                                states
+                                    .cached_state
+                                    .get::<LayerSurfaceCachedState>()
+                                    .current()
+                                    .clone()
+                            },
+                        );
+                        let r = layer_rect(&cached, ow, oh);
+                        let elements = render_elements_from_surface_tree(
+                            renderer,
+                            m.surface.wl_surface(),
+                            (r.x, r.y),
+                            1.0,
+                            1.0f32,
+                            Kind::Unspecified,
+                        );
+                        Some(LayerRenderData {
+                            elements,
+                            layer: m.layer.clone(),
+                        })
+                    })
+                    .collect()
             };
 
             // Phase 1c: X11 surface render elements (mapped XWayland windows).
@@ -482,7 +539,9 @@ pub fn run(
                 x: i32,
                 y: i32,
             }
-            let x11_data: Vec<X11RenderData> = state.xwayland_surfaces.iter()
+            let x11_data: Vec<X11RenderData> = state
+                .xwayland_surfaces
+                .iter()
                 .filter_map(|surf| {
                     let wl = surf.wl_surface()?;
                     let geo = surf.geometry();
@@ -494,29 +553,35 @@ pub fn run(
                         1.0f32,
                         Kind::Unspecified,
                     );
-                    Some(X11RenderData { elements, x: geo.loc.x, y: geo.loc.y })
+                    Some(X11RenderData {
+                        elements,
+                        x: geo.loc.x,
+                        y: geo.loc.y,
+                    })
                 })
                 .collect();
 
             // Phase 1d: session-lock surface elements (rendered only when locked).
-            let lock_data: Vec<Vec<WaylandSurfaceRenderElement<GlesRenderer>>> =
-                if state.is_locked {
-                    state.lock_surfaces.iter()
-                        .filter(|s| s.alive())
-                        .map(|s| {
-                            render_elements_from_surface_tree(
-                                renderer,
-                                s.wl_surface(),
-                                (0, 0),
-                                1.0,
-                                1.0f32,
-                                Kind::Unspecified,
-                            )
-                        })
-                        .collect()
-                } else {
-                    vec![]
-                };
+            let lock_data: Vec<Vec<WaylandSurfaceRenderElement<GlesRenderer>>> = if state.is_locked
+            {
+                state
+                    .lock_surfaces
+                    .iter()
+                    .filter(|s| s.alive())
+                    .map(|s| {
+                        render_elements_from_surface_tree(
+                            renderer,
+                            s.wl_surface(),
+                            (0, 0),
+                            1.0,
+                            1.0f32,
+                            Kind::Unspecified,
+                        )
+                    })
+                    .collect()
+            } else {
+                vec![]
+            };
 
             // Phase 1e: stack-peek cascade elements (§6.8).
             // Pre-built while we still hold the renderer (before frame open).
@@ -529,7 +594,10 @@ pub fn run(
                 let mut result = Vec::new();
                 let focused_id = state.grid.focused_window;
                 if let Some(fid) = focused_id {
-                    let info = state.grid.windows.get(&fid)
+                    let info = state
+                        .grid
+                        .windows
+                        .get(&fid)
                         .and_then(|w| Some((w.workspace, w.current_slot?)));
                     if let Some((ws, slot)) = info {
                         let stack_ids = state.grid.slot_stack_ids(ws, slot);
@@ -555,7 +623,11 @@ pub fn run(
                                         base.w,
                                         base.h,
                                     );
-                                    let alpha = if idx == 0 { 1.0f32 } else { state.config.theme.window.stacked.peek_dim_unstacked };
+                                    let alpha = if idx == 0 {
+                                        1.0f32
+                                    } else {
+                                        state.config.theme.window.stacked.peek_dim_unstacked
+                                    };
                                     let wl = win.surface.wl_surface().clone();
                                     let elements = render_elements_from_surface_tree(
                                         renderer,
@@ -618,32 +690,51 @@ pub fn run(
                 for ov_row in 0..rows {
                     for ov_col in 0..cols {
                         let thumb = layout::overview_thumbnail_rect(
-                            ov_col, ov_row, cols, rows, ow, oh, OV_GAP_PX, OV_MARGIN_PX,
+                            ov_col,
+                            ov_row,
+                            cols,
+                            rows,
+                            ow,
+                            oh,
+                            OV_GAP_PX,
+                            OV_MARGIN_PX,
                         );
                         let is_home = (ov_col, ov_row) == focused_ws;
-                        let is_kb   = (ov_col, ov_row) == ov_focused;
+                        let is_kb = (ov_col, ov_row) == ov_focused;
 
                         // ── Thumbnail border ──────────────────────────────────
                         let border_px: i32 = if is_kb { 3 } else { 1 };
-                        let bc = if is_kb { accent } else if is_home { accent_dim } else { idle };
+                        let bc = if is_kb {
+                            accent
+                        } else if is_home {
+                            accent_dim
+                        } else {
+                            idle
+                        };
                         let brect: Rectangle<i32, Physical> = Rectangle::new(
                             (thumb.x - border_px, thumb.y - border_px).into(),
                             (thumb.w + 2 * border_px, thumb.h + 2 * border_px).into(),
                         );
                         if let Some(clipped) = brect.intersection(screen_rect) {
-                            frame.clear(Color32F::new(bc[0], bc[1], bc[2], 1.0), &[clipped]).ok();
+                            frame
+                                .clear(Color32F::new(bc[0], bc[1], bc[2], 1.0), &[clipped])
+                                .ok();
                         }
 
                         // ── Thumbnail background ──────────────────────────────
-                        let thumb_bg = if is_home { lighten(bg_alt, 0.05) } else { bg_alt };
-                        let thumb_phys: Rectangle<i32, Physical> = Rectangle::new(
-                            (thumb.x, thumb.y).into(),
-                            (thumb.w, thumb.h).into(),
-                        );
-                        frame.clear(
-                            Color32F::new(thumb_bg[0], thumb_bg[1], thumb_bg[2], 1.0),
-                            &[thumb_phys],
-                        ).ok();
+                        let thumb_bg = if is_home {
+                            lighten(bg_alt, 0.05)
+                        } else {
+                            bg_alt
+                        };
+                        let thumb_phys: Rectangle<i32, Physical> =
+                            Rectangle::new((thumb.x, thumb.y).into(), (thumb.w, thumb.h).into());
+                        frame
+                            .clear(
+                                Color32F::new(thumb_bg[0], thumb_bg[1], thumb_bg[2], 1.0),
+                                &[thumb_phys],
+                            )
+                            .ok();
 
                         // ── Window representations ────────────────────────────
                         let scale_x = thumb.w as f64 / ow as f64;
@@ -666,24 +757,26 @@ pub fn run(
                                 // 1px inner gap so adjacent windows are distinguishable.
                                 let inner: Rectangle<i32, Physical> = Rectangle::new(
                                     (clipped.loc.x + 1, clipped.loc.y + 1).into(),
-                                    ((clipped.size.w - 2).max(1), (clipped.size.h - 2).max(1)).into(),
+                                    ((clipped.size.w - 2).max(1), (clipped.size.h - 2).max(1))
+                                        .into(),
                                 );
-                                frame.clear(
-                                    Color32F::new(wc[0], wc[1], wc[2], 1.0),
-                                    &[inner],
-                                ).ok();
+                                frame
+                                    .clear(Color32F::new(wc[0], wc[1], wc[2], 1.0), &[inner])
+                                    .ok();
                             }
                         }
                     }
                 }
 
                 // ── Layer: Top + Overlay rendered over the overview (bars stay visible) ──
-                for ld in layer_data.iter().filter(|l| matches!(l.layer, Layer::Top | Layer::Overlay)) {
+                for ld in layer_data
+                    .iter()
+                    .filter(|l| matches!(l.layer, Layer::Top | Layer::Overlay))
+                {
                     draw_render_elements(&mut frame, 1.0, &ld.elements, &[screen_rect]).ok();
                 }
 
                 // ── Minimap HUD (§7.4) — in overview we skip minimap (redundant) ──
-
             } else {
                 // ── Focus mode rendering ────────────────────────────────────────
 
@@ -692,11 +785,17 @@ pub fn run(
                     .context("Failed to clear background")?;
 
                 // Layer: Background
-                for ld in layer_data.iter().filter(|l| matches!(l.layer, Layer::Background)) {
+                for ld in layer_data
+                    .iter()
+                    .filter(|l| matches!(l.layer, Layer::Background))
+                {
                     draw_render_elements(&mut frame, 1.0, &ld.elements, &[screen_rect]).ok();
                 }
                 // Layer: Bottom
-                for ld in layer_data.iter().filter(|l| matches!(l.layer, Layer::Bottom)) {
+                for ld in layer_data
+                    .iter()
+                    .filter(|l| matches!(l.layer, Layer::Bottom))
+                {
                     draw_render_elements(&mut frame, 1.0, &ld.elements, &[screen_rect]).ok();
                 }
 
@@ -721,7 +820,9 @@ pub fn run(
                                 (wd.rect.w - dx, dy).into(),
                             );
                             let cue_color = Color32F::new(
-                                idle[0] * 0.85, idle[1] * 0.85, idle[2] * 0.85,
+                                idle[0] * 0.85,
+                                idle[1] * 0.85,
+                                idle[2] * 0.85,
                                 wd.alpha * 0.9,
                             );
                             if let Some(c) = right_strip.intersection(screen_rect) {
@@ -767,7 +868,10 @@ pub fn run(
                     draw_render_elements(&mut frame, 1.0, &ld.elements, &[screen_rect]).ok();
                 }
                 // Layer: Overlay
-                for ld in layer_data.iter().filter(|l| matches!(l.layer, Layer::Overlay)) {
+                for ld in layer_data
+                    .iter()
+                    .filter(|l| matches!(l.layer, Layer::Overlay))
+                {
                     draw_render_elements(&mut frame, 1.0, &ld.elements, &[screen_rect]).ok();
                 }
 
@@ -786,10 +890,12 @@ pub fn run(
                         (preview_rect.x, preview_rect.y).into(),
                         (preview_rect.w, preview_rect.h).into(),
                     );
-                    frame.clear(
-                        Color32F::new(accent[0], accent[1], accent[2], 0.25),
-                        &[prect],
-                    ).ok();
+                    frame
+                        .clear(
+                            Color32F::new(accent[0], accent[1], accent[2], 0.25),
+                            &[prect],
+                        )
+                        .ok();
                 }
 
                 // ── Minimap HUD (§7.4) ─────────────────────────────────────────
@@ -811,12 +917,11 @@ pub fn run(
                             let cell = layout::minimap_cell_rect(
                                 mm_col, mm_row, MM_CELL_PX, MM_GAP_PX, anchor_x, anchor_y,
                             );
-                            let cell_phys: Rectangle<i32, Physical> = Rectangle::new(
-                                (cell.x, cell.y).into(),
-                                (cell.w, cell.h).into(),
-                            );
+                            let cell_phys: Rectangle<i32, Physical> =
+                                Rectangle::new((cell.x, cell.y).into(), (cell.w, cell.h).into());
                             let is_focused = (mm_col, mm_row) == focused_ws;
-                            let has_windows = !state.grid
+                            let has_windows = !state
+                                .grid
                                 .visible_windows_for_ws((mm_col, mm_row))
                                 .is_empty();
                             let cc = if is_focused {
@@ -827,10 +932,9 @@ pub fn run(
                                 bg_alt
                             };
                             if let Some(clipped) = cell_phys.intersection(screen_rect) {
-                                frame.clear(
-                                    Color32F::new(cc[0], cc[1], cc[2], 0.85),
-                                    &[clipped],
-                                ).ok();
+                                frame
+                                    .clear(Color32F::new(cc[0], cc[1], cc[2], 0.85), &[clipped])
+                                    .ok();
                             }
                         }
                     }
@@ -839,18 +943,26 @@ pub fn run(
                 // ── Stack-peek cascade overlay (§6.8) ─────────────────────────────
                 if !cascade_data.is_empty() {
                     // Dim everything else to focus attention on the cascade.
-                    frame.clear(Color32F::new(0.0, 0.0, 0.0, 0.5), &[screen_rect]).ok();
+                    frame
+                        .clear(Color32F::new(0.0, 0.0, 0.0, 0.5), &[screen_rect])
+                        .ok();
                     // Render stack from bottom (most-shifted) to top (least-shifted).
                     for layer in cascade_data.iter().rev() {
-                        let bpx = if layer.is_top { border_focused } else { border_unfocused };
-                        let bc  = if layer.is_top { accent } else { idle };
+                        let bpx = if layer.is_top {
+                            border_focused
+                        } else {
+                            border_unfocused
+                        };
+                        let bc = if layer.is_top { accent } else { idle };
                         // Background fill so window content is readable.
                         let bg_rect: Rectangle<i32, Physical> = Rectangle::new(
                             (layer.rect.x, layer.rect.y).into(),
                             (layer.rect.w, layer.rect.h).into(),
                         );
                         if let Some(c) = bg_rect.intersection(screen_rect) {
-                            frame.clear(Color32F::new(bg[0], bg[1], bg[2], 1.0), &[c]).ok();
+                            frame
+                                .clear(Color32F::new(bg[0], bg[1], bg[2], 1.0), &[c])
+                                .ok();
                         }
                         // Border.
                         if bpx > 0 {
@@ -859,7 +971,9 @@ pub fn run(
                                 (layer.rect.w + 2 * bpx, layer.rect.h + 2 * bpx).into(),
                             );
                             if let Some(c) = brect.intersection(screen_rect) {
-                                frame.clear(Color32F::new(bc[0], bc[1], bc[2], 1.0), &[c]).ok();
+                                frame
+                                    .clear(Color32F::new(bc[0], bc[1], bc[2], 1.0), &[c])
+                                    .ok();
                             }
                         }
                         // Window surface content.
@@ -869,22 +983,23 @@ pub fn run(
             }
 
             // ── OSD indicator (§8.9) ─────────────────────────────────────────────────
-            let osd_visible = state.osd_hide_at
+            let osd_visible = state
+                .osd_hide_at
                 .map(|t| t > std::time::Instant::now())
                 .unwrap_or(false);
             if osd_visible && state.config.theme.osd.enabled {
                 let osd_kind = state.osd_kind.as_deref().unwrap_or("workspace");
-                let show_ws  = osd_kind == "workspace";
+                let show_ws = osd_kind == "workspace";
                 // Determine bar color for status-style OSD kinds.
                 let bar_color: Option<[f32; 4]> = match osd_kind {
-                    "submap"                      => Some(accent),
-                    "reload-ok"                   => Some(ok_color),
-                    "reload-err"                  => Some(danger),
+                    "submap" => Some(accent),
+                    "reload-ok" => Some(ok_color),
+                    "reload-err" => Some(danger),
                     "notification-daemon-missing" => Some(warn),
-                    "safe-mode"                   => Some(danger),
+                    "safe-mode" => Some(danger),
                     // Custom osd-show text: render as accent bar.
                     other if other != "workspace" => Some(accent),
-                    _                             => None,
+                    _ => None,
                 };
 
                 let ow = state.grid.output_w;
@@ -894,7 +1009,7 @@ pub fn run(
 
                 if show_ws {
                     let cell_px = state.config.theme.osd.cell_px;
-                    let gap_px  = state.config.theme.osd.cell_gap_px;
+                    let gap_px = state.config.theme.osd.cell_gap_px;
                     let cols = state.grid.cols as i32;
                     let rows = state.grid.rows as i32;
                     let osd_w = cols * cell_px + (cols - 1) * gap_px + pad * 2;
@@ -912,7 +1027,9 @@ pub fn run(
                     // Background panel.
                     let panel = Rectangle::new((osd_x, osd_y).into(), (osd_w, osd_h).into());
                     if let Some(c) = panel.intersection(screen_rect) {
-                        frame.clear(Color32F::new(bg_alt[0], bg_alt[1], bg_alt[2], 0.90), &[c]).ok();
+                        frame
+                            .clear(Color32F::new(bg_alt[0], bg_alt[1], bg_alt[2], 0.90), &[c])
+                            .ok();
                     }
                     let focused_ws = state.grid.focused;
                     for wr in 0..rows {
@@ -920,20 +1037,31 @@ pub fn run(
                             let cx = osd_x + pad + wc * (cell_px + gap_px);
                             let cy = osd_y + pad + wr * (cell_px + gap_px);
                             let is_focused = (wc as u8, wr as u8) == focused_ws;
-                            let has_win = !state.grid
+                            let has_win = !state
+                                .grid
                                 .visible_windows_for_ws((wc as u8, wr as u8))
                                 .is_empty();
-                            let cc = if is_focused { accent }
-                                     else if has_win { idle }
-                                     else { bg_alt };
-                            let cell_r: Rectangle<i32, Physical> = Rectangle::new(
-                                (cx, cy).into(), (cell_px, cell_px).into(),
-                            );
+                            let cc = if is_focused {
+                                accent
+                            } else if has_win {
+                                idle
+                            } else {
+                                bg_alt
+                            };
+                            let cell_r: Rectangle<i32, Physical> =
+                                Rectangle::new((cx, cy).into(), (cell_px, cell_px).into());
                             if let Some(c) = cell_r.intersection(screen_rect) {
-                                frame.clear(
-                                    Color32F::new(cc[0], cc[1], cc[2], if is_focused { 1.0 } else { 0.7 }),
-                                    &[c],
-                                ).ok();
+                                frame
+                                    .clear(
+                                        Color32F::new(
+                                            cc[0],
+                                            cc[1],
+                                            cc[2],
+                                            if is_focused { 1.0 } else { 0.7 },
+                                        ),
+                                        &[c],
+                                    )
+                                    .ok();
                             }
                         }
                     }
@@ -957,7 +1085,9 @@ pub fn run(
                     // Background panel.
                     let panel = Rectangle::new((osd_x, osd_y).into(), (osd_w, osd_h).into());
                     if let Some(c) = panel.intersection(screen_rect) {
-                        frame.clear(Color32F::new(bg_alt[0], bg_alt[1], bg_alt[2], 0.90), &[c]).ok();
+                        frame
+                            .clear(Color32F::new(bg_alt[0], bg_alt[1], bg_alt[2], 0.90), &[c])
+                            .ok();
                     }
                     // Colored inner bar.
                     let inner = Rectangle::new(
@@ -965,7 +1095,9 @@ pub fn run(
                         (osd_w - pad * 2, osd_h - pad * 2).into(),
                     );
                     if let Some(c) = inner.intersection(screen_rect) {
-                        frame.clear(Color32F::new(bc[0], bc[1], bc[2], 0.90), &[c]).ok();
+                        frame
+                            .clear(Color32F::new(bc[0], bc[1], bc[2], 0.90), &[c])
+                            .ok();
                     }
                 }
             }
@@ -976,9 +1108,15 @@ pub fn run(
                 let dt_ms = now.duration_since(state.debug_last_frame).as_secs_f32() * 1000.0;
                 state.debug_last_frame = now;
                 state.debug_frame_times.push_back(dt_ms);
-                if state.debug_frame_times.len() > 60 { state.debug_frame_times.pop_front(); }
-                let avg_ms: f32 = if state.debug_frame_times.is_empty() { 16.67 }
-                    else { state.debug_frame_times.iter().sum::<f32>() / state.debug_frame_times.len() as f32 };
+                if state.debug_frame_times.len() > 60 {
+                    state.debug_frame_times.pop_front();
+                }
+                let avg_ms: f32 = if state.debug_frame_times.is_empty() {
+                    16.67
+                } else {
+                    state.debug_frame_times.iter().sum::<f32>()
+                        / state.debug_frame_times.len() as f32
+                };
                 // Draw a thin bar: green (<20ms), yellow (<33ms), red (>33ms).
                 let bar_h = 4i32;
                 let bar_w = (state.grid.output_w as f32 * (avg_ms / 50.0).min(1.0)) as i32;
@@ -989,20 +1127,23 @@ pub fn run(
                 } else {
                     [0.9, 0.2, 0.1, 1.0]
                 };
-                let dbg_rect: Rectangle<i32, Physical> = Rectangle::new(
-                    (0, 0).into(), (bar_w.max(1), bar_h).into(),
-                );
+                let dbg_rect: Rectangle<i32, Physical> =
+                    Rectangle::new((0, 0).into(), (bar_w.max(1), bar_h).into());
                 if let Some(c) = dbg_rect.intersection(screen_rect) {
-                    frame.clear(Color32F::new(bar_color[0], bar_color[1], bar_color[2], bar_color[3]), &[c]).ok();
+                    frame
+                        .clear(
+                            Color32F::new(bar_color[0], bar_color[1], bar_color[2], bar_color[3]),
+                            &[c],
+                        )
+                        .ok();
                 }
                 // Window count indicator: small square per window in grid (top-left, below bar).
                 let win_count = state.grid.windows.len().min(64);
                 for i in 0..win_count {
                     let wx = (i as i32 % 16) * 5;
                     let wy = bar_h + (i as i32 / 16) * 5;
-                    let wr: Rectangle<i32, Physical> = Rectangle::new(
-                        (wx, wy).into(), (4, 4).into(),
-                    );
+                    let wr: Rectangle<i32, Physical> =
+                        Rectangle::new((wx, wy).into(), (4, 4).into());
                     if let Some(c) = wr.intersection(screen_rect) {
                         frame.clear(Color32F::new(0.5, 0.8, 1.0, 0.9), &[c]).ok();
                     }
@@ -1033,7 +1174,9 @@ pub fn run(
             }
         }
         // Frame callbacks for X11 surfaces.
-        let x11_wl_surfaces: Vec<_> = state.xwayland_surfaces.iter()
+        let x11_wl_surfaces: Vec<_> = state
+            .xwayland_surfaces
+            .iter()
             .filter_map(|s| s.wl_surface())
             .collect();
         for wl in &x11_wl_surfaces {
@@ -1044,8 +1187,8 @@ pub fn run(
         {
             use smithay::wayland::compositor::with_states;
             use smithay::wayland::presentation::{PresentationFeedbackCachedState, Refresh};
-            use wayland_protocols::wp::presentation_time::server::wp_presentation_feedback;
             use std::time::Duration;
+            use wayland_protocols::wp::presentation_time::server::wp_presentation_feedback;
 
             let pres_time = Duration::from(state.clock.now());
             let refresh = Refresh::fixed(Duration::from_nanos(1_000_000_000 / 60));
@@ -1115,7 +1258,8 @@ pub fn run(
         // 7b. Periodic session autosave (§22.1)
         {
             let interval_s = state.config.session.autosave_interval_s;
-            if interval_s > 0 && !state.safe_mode
+            if interval_s > 0
+                && !state.safe_mode
                 && state.last_session_save.elapsed().as_secs() >= u64::from(interval_s)
             {
                 crate::session::save(&state);
@@ -1161,10 +1305,7 @@ fn handle_winit_event(event: WinitEvent, state: &mut GlobalState) {
     }
 }
 
-fn handle_input(
-    event: InputEvent<smithay::backend::winit::WinitInput>,
-    state: &mut GlobalState,
-) {
+fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &mut GlobalState) {
     // Any input resets the idle clock and notifies ext-idle-notify-v1 clients.
     state.reset_idle();
     let seat = state.seat.clone();
@@ -1201,7 +1342,9 @@ fn handle_input(
                                         if let Some(pointer) = data.seat.get_pointer() {
                                             use smithay::wayland::pointer_constraints::with_pointer_constraint;
                                             with_pointer_constraint(&surface, &pointer, |c| {
-                                                if let Some(c) = c { c.deactivate(); }
+                                                if let Some(c) = c {
+                                                    c.deactivate();
+                                                }
                                             });
                                         }
                                     }
@@ -1348,7 +1491,7 @@ fn handle_input(
                                 crate::ipc::events::Event::KeyboardLayoutChanged {
                                     device: "seat0".into(),
                                     layout: layout_now.clone(),
-                                }
+                                },
                             );
                         }
                         state.current_keyboard_layout = layout_now;
@@ -1395,7 +1538,10 @@ fn handle_input(
                 if drag_clone.started_tiled {
                     let threshold = state.config.windows.unsnap_threshold_px as f64;
                     if drag_dist >= threshold {
-                        let is_still_tiled = state.grid.windows.get(&id)
+                        let is_still_tiled = state
+                            .grid
+                            .windows
+                            .get(&id)
                             .map(|w| w.current_state == WindowState::Tiled)
                             .unwrap_or(false);
                         if is_still_tiled {
@@ -1419,10 +1565,15 @@ fn handle_input(
                         }
                     }
                     // Don't move the window while it's still tiled
-                    let still_tiled = state.grid.windows.get(&id)
+                    let still_tiled = state
+                        .grid
+                        .windows
+                        .get(&id)
                         .map(|w| w.current_state == WindowState::Tiled)
                         .unwrap_or(false);
-                    if still_tiled { return; }
+                    if still_tiled {
+                        return;
+                    }
                 }
 
                 // Re-read drag (may have been mutated during unsnap)
@@ -1447,7 +1598,8 @@ fn handle_input(
                     if drag.kind == DragKind::Move && state.config.windows.edge_snap {
                         let threshold = state.config.windows.edge_snap_threshold_px as i32;
                         let preview = snap_slot_for_cursor(
-                            x, y,
+                            x,
+                            y,
                             state.grid.output_w,
                             state.grid.output_h,
                             threshold,
@@ -1521,20 +1673,27 @@ fn handle_input(
                 for ov_row in 0..rows {
                     for ov_col in 0..cols {
                         let thumb = layout::overview_thumbnail_rect(
-                            ov_col, ov_row, cols, rows, ow, oh, OV_GAP_PX, OV_MARGIN_PX,
+                            ov_col,
+                            ov_row,
+                            cols,
+                            rows,
+                            ow,
+                            oh,
+                            OV_GAP_PX,
+                            OV_MARGIN_PX,
                         );
-                        if (cx as i32) >= thumb.x && (cx as i32) < thumb.x + thumb.w
-                            && (cy as i32) >= thumb.y && (cy as i32) < thumb.y + thumb.h
+                        if (cx as i32) >= thumb.x
+                            && (cx as i32) < thumb.x + thumb.w
+                            && (cy as i32) >= thumb.y
+                            && (cy as i32) < thumb.y + thumb.h
                         {
                             // Exit overview and switch to the clicked workspace.
                             state.is_overview = false;
                             state.pending_events.push(IpcEvent::OverviewClosed);
-                            state.pending_events
-                                .push(IpcEvent::ViewModeChanged { mode: "focus".into() });
-                            dispatcher::dispatch(
-                                Action::WorkspaceTo(ov_col, ov_row),
-                                state,
-                            );
+                            state.pending_events.push(IpcEvent::ViewModeChanged {
+                                mode: "focus".into(),
+                            });
+                            dispatcher::dispatch(Action::WorkspaceTo(ov_col, ov_row), state);
                             return;
                         }
                     }
@@ -1568,7 +1727,11 @@ fn handle_input(
                                 let started_tiled = is_tiled;
                                 state.drag = Some(DragState {
                                     window_id: id,
-                                    kind: if button == BTN_LEFT { DragKind::Move } else { DragKind::Resize },
+                                    kind: if button == BTN_LEFT {
+                                        DragKind::Move
+                                    } else {
+                                        DragKind::Resize
+                                    },
                                     start_cursor: (x, y),
                                     start_x: geom.x,
                                     start_y: geom.y,
@@ -1651,8 +1814,12 @@ fn handle_input(
                 let pointer = pointer.clone();
                 let mut frame = AxisFrame::new(event.time_msec()).source(event.source());
 
-                if hv != 0.0 { frame = frame.value(Axis::Horizontal, hv); }
-                if vv != 0.0 { frame = frame.value(Axis::Vertical, vv); }
+                if hv != 0.0 {
+                    frame = frame.value(Axis::Horizontal, hv);
+                }
+                if vv != 0.0 {
+                    frame = frame.value(Axis::Vertical, vv);
+                }
 
                 if let Some(d) = event.amount_v120(Axis::Horizontal) && d != 0.0 {
                     frame = frame.v120(Axis::Horizontal, d as i32);
@@ -1774,7 +1941,9 @@ fn send_frames_surface_tree(
     surface: &smithay::reexports::wayland_server::protocol::wl_surface::WlSurface,
     time_ms: u32,
 ) {
-    use smithay::wayland::compositor::{with_surface_tree_downward, SurfaceAttributes, TraversalAction};
+    use smithay::wayland::compositor::{
+        SurfaceAttributes, TraversalAction, with_surface_tree_downward,
+    };
 
     with_surface_tree_downward(
         surface,
@@ -1807,22 +1976,34 @@ fn snap_slot_for_cursor(
     threshold: i32,
 ) -> Option<Slot> {
     let t = threshold as f64;
-    let near_left   = x < t;
-    let near_right  = x > (screen_w as f64 - t);
-    let near_top    = y < t;
+    let near_left = x < t;
+    let near_right = x > (screen_w as f64 - t);
+    let near_top = y < t;
     let near_bottom = y > (screen_h as f64 - t);
 
     // Corners (priority over half-edges)
-    if near_left  && near_top    { return Some(Slot::QuarterTL); }
-    if near_right && near_top    { return Some(Slot::QuarterTR); }
-    if near_left  && near_bottom { return Some(Slot::QuarterBL); }
-    if near_right && near_bottom { return Some(Slot::QuarterBR); }
+    if near_left && near_top {
+        return Some(Slot::QuarterTL);
+    }
+    if near_right && near_top {
+        return Some(Slot::QuarterTR);
+    }
+    if near_left && near_bottom {
+        return Some(Slot::QuarterBL);
+    }
+    if near_right && near_bottom {
+        return Some(Slot::QuarterBR);
+    }
 
     // Half-edges: center 1/3 of perpendicular dimension
     let y_pct = y / screen_h as f64;
     let in_center_third = (1.0 / 3.0..=2.0 / 3.0).contains(&y_pct);
-    if near_left  && in_center_third { return Some(Slot::HalfLeft); }
-    if near_right && in_center_third { return Some(Slot::HalfRight); }
+    if near_left && in_center_third {
+        return Some(Slot::HalfLeft);
+    }
+    if near_right && in_center_third {
+        return Some(Slot::HalfRight);
+    }
 
     None
 }
@@ -1841,9 +2022,9 @@ fn lighten(c: [f32; 4], amount: f32) -> [f32; 4] {
 fn is_in_hot_corner(x: f64, y: f64, w: i32, h: i32, corner: &str) -> bool {
     const THRESHOLD: f64 = 4.0;
     match corner {
-        "top-left"     => x < THRESHOLD && y < THRESHOLD,
-        "top-right"    => x > w as f64 - THRESHOLD && y < THRESHOLD,
-        "bottom-left"  => x < THRESHOLD && y > h as f64 - THRESHOLD,
+        "top-left" => x < THRESHOLD && y < THRESHOLD,
+        "top-right" => x > w as f64 - THRESHOLD && y < THRESHOLD,
+        "bottom-left" => x < THRESHOLD && y > h as f64 - THRESHOLD,
         "bottom-right" => x > w as f64 - THRESHOLD && y > h as f64 - THRESHOLD,
         _ => false,
     }
@@ -1859,5 +2040,10 @@ fn parse_hex_color(s: &str) -> [f32; 4] {
             0.0
         }
     };
-    [byte(0), byte(2), byte(4), if s.len() >= 8 { byte(6) } else { 1.0 }]
+    [
+        byte(0),
+        byte(2),
+        byte(4),
+        if s.len() >= 8 { byte(6) } else { 1.0 },
+    ]
 }

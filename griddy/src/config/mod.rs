@@ -5,7 +5,9 @@ pub mod theme;
 pub mod types;
 
 #[allow(unused_imports)]
-pub use monitors::{load_monitors, MonitorConfig, MonitorDefaults, MonitorsConfig, OutputTransform, VrrPolicy};
+pub use monitors::{
+    MonitorConfig, MonitorDefaults, MonitorsConfig, OutputTransform, VrrPolicy, load_monitors,
+};
 pub use templates::WorkspaceTemplatesConfig;
 pub use theme::*;
 pub use types::*;
@@ -76,7 +78,10 @@ pub fn load_config(path: Option<&Path>) -> Result<Config> {
             tracing::warn!("Rejecting absolute import path: {import}");
             continue;
         }
-        if raw.components().any(|c| c == std::path::Component::ParentDir) {
+        if raw
+            .components()
+            .any(|c| c == std::path::Component::ParentDir)
+        {
             tracing::warn!("Rejecting path-traversal import: {import}");
             continue;
         }
@@ -147,7 +152,11 @@ pub fn load_theme_file(path: &Path) -> Result<ThemeConfig> {
 
     if let Some(name) = import_name {
         if let Some(preset_path) = resolve_theme_preset(&name) {
-            tracing::debug!("Loading theme preset '{}' from {}", name, preset_path.display());
+            tracing::debug!(
+                "Loading theme preset '{}' from {}",
+                name,
+                preset_path.display()
+            );
             match std::fs::read_to_string(&preset_path) {
                 Ok(preset_content) => {
                     match toml::from_str::<toml::Value>(&preset_content) {
@@ -258,12 +267,15 @@ fn load_keybinds_file(path: &Path) -> Result<Vec<BindConfig>> {
 fn merge_config(base: &mut Config, content: &str, path: &Path) -> Result<()> {
     let overlay: toml::Value = toml::from_str(content)
         .with_context(|| format!("Failed to parse import: {}", path.display()))?;
-    let mut base_value = toml::Value::try_from(base.clone())
-        .context("Failed to serialize base config")?;
+    let mut base_value =
+        toml::Value::try_from(base.clone()).context("Failed to serialize base config")?;
     merge_toml(&mut base_value, overlay);
-    *base = base_value
-        .try_into()
-        .with_context(|| format!("Failed to deserialize merged config from {}", path.display()))?;
+    *base = base_value.try_into().with_context(|| {
+        format!(
+            "Failed to deserialize merged config from {}",
+            path.display()
+        )
+    })?;
     Ok(())
 }
 
@@ -289,7 +301,7 @@ pub fn apply_env(config: &Config) {
         std::env::set_var("XDG_SESSION_TYPE", "wayland");
         // Export cursor theme/size so child processes (GTK, Qt, XWayland) pick them up.
         std::env::set_var("XCURSOR_THEME", &config.theme.cursor.theme);
-        std::env::set_var("XCURSOR_SIZE",   config.theme.cursor.size.to_string());
+        std::env::set_var("XCURSOR_SIZE", config.theme.cursor.size.to_string());
         for (key, val) in &config.env {
             if key.is_empty() || key.contains('\0') || key.contains('=') {
                 tracing::warn!("Skipping invalid env key: {:?}", key);

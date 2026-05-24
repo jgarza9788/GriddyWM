@@ -6,7 +6,7 @@
 //! Phase 3 will implement the full socket protocol. For now this
 //! provides the CLI skeleton and a simple dispatch command.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::{Parser, Subcommand};
 use std::{
     io::{BufRead, BufReader, Write},
@@ -247,7 +247,10 @@ fn main() -> Result<()> {
             let resp = send_raw(&socket_path, &cmd, args.json)?;
             println!("{resp}");
         }
-        Command::Dispatch { action, args: cmd_args } => {
+        Command::Dispatch {
+            action,
+            args: cmd_args,
+        } => {
             let cmd = if cmd_args.is_empty() {
                 format!("dispatch {action}")
             } else {
@@ -299,7 +302,11 @@ fn main() -> Result<()> {
             let resp = send_raw(&socket_path, &format!("debug {sub}"), args.json)?;
             println!("{resp}");
         }
-        Command::Import { source, config_path, output } => {
+        Command::Import {
+            source,
+            config_path,
+            output,
+        } => {
             let toml_out = import_config(&source, &config_path)?;
             match output {
                 Some(path) => {
@@ -337,10 +344,12 @@ fn main() -> Result<()> {
         }
         Command::Workspace(ws_cmd) => {
             let cmd = match ws_cmd {
-                WorkspaceCommand::ApplyTemplate { col, row } =>
-                    format!("dispatch workspace-apply-template {col},{row}"),
-                WorkspaceCommand::Rename { col, row, name } =>
-                    format!("dispatch workspace-rename {col} {row} {name}"),
+                WorkspaceCommand::ApplyTemplate { col, row } => {
+                    format!("dispatch workspace-apply-template {col},{row}")
+                }
+                WorkspaceCommand::Rename { col, row, name } => {
+                    format!("dispatch workspace-rename {col} {row} {name}")
+                }
             };
             let resp = send_raw(&socket_path, &cmd, args.json)?;
             println!("{resp}");
@@ -407,8 +416,7 @@ fn socket_path(instance: Option<&str>, filename: &str) -> Option<PathBuf> {
 }
 
 fn subscribe(evt_path: &PathBuf) -> Result<()> {
-    let stream =
-        UnixStream::connect(evt_path).context("Failed to connect to events socket")?;
+    let stream = UnixStream::connect(evt_path).context("Failed to connect to events socket")?;
     let reader = BufReader::new(stream);
     for line in reader.lines() {
         match line {
@@ -434,8 +442,8 @@ fn send_command(socket_path: &PathBuf, command: &str, json: bool) -> Result<Stri
 // ─── Config import (§22.15) ──────────────────────────────────────────────────
 
 fn import_config(source: &str, path: &PathBuf) -> Result<String> {
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("Cannot read {}", path.display()))?;
+    let content =
+        std::fs::read_to_string(path).with_context(|| format!("Cannot read {}", path.display()))?;
     match source {
         "hyprland" => Ok(import_hyprland(&content)),
         "sway" | "i3" => Ok(import_sway(&content)),
@@ -473,8 +481,11 @@ fn import_hyprland(src: &str) -> String {
             let rest = rest.trim_start_matches([' ', '=']);
             let parts: Vec<&str> = rest.splitn(4, ',').map(|s| s.trim()).collect();
             if parts.len() >= 3 {
-                let mods = parts[0].replace("SUPER", "$mod").replace("SHIFT", "Shift")
-                    .replace("CTRL", "Ctrl").replace("ALT", "Alt");
+                let mods = parts[0]
+                    .replace("SUPER", "$mod")
+                    .replace("SHIFT", "Shift")
+                    .replace("CTRL", "Ctrl")
+                    .replace("ALT", "Alt");
                 let key = parts[1];
                 let action = parts[2];
                 let extra = parts.get(3).copied().unwrap_or("");
@@ -696,10 +707,17 @@ fn import_sway(src: &str) -> String {
                     let mods_toml = if mods_vec.is_empty() {
                         String::new()
                     } else {
-                        let joined = mods_vec.iter().map(|m| format!("{m:?}")).collect::<Vec<_>>().join(", ");
+                        let joined = mods_vec
+                            .iter()
+                            .map(|m| format!("{m:?}"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
                         format!("mods = [{joined}]\n")
                     };
-                    binds.push(format!("[[bind]]\n{}key = {:?}\naction = {:?}", mods_toml, key, action));
+                    binds.push(format!(
+                        "[[bind]]\n{}key = {:?}\naction = {:?}",
+                        mods_toml, key, action
+                    ));
                 } else {
                     unmapped.push(format!("# UNMAPPED: {line}"));
                 }
@@ -708,22 +726,39 @@ fn import_sway(src: &str) -> String {
         }
 
         if line.starts_with("gaps inner") {
-            let v: i32 = line.split_whitespace().last().unwrap_or("").parse().unwrap_or(gaps_inner);
+            let v: i32 = line
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .parse()
+                .unwrap_or(gaps_inner);
             gaps_inner = v;
         }
         if line.starts_with("gaps outer") {
-            let v: i32 = line.split_whitespace().last().unwrap_or("").parse().unwrap_or(gaps_outer);
+            let v: i32 = line
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .parse()
+                .unwrap_or(gaps_outer);
             gaps_outer = v;
         }
         if line.starts_with("default_border pixel") {
-            let v: i32 = line.split_whitespace().last().unwrap_or("").parse().unwrap_or(border_px);
+            let v: i32 = line
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .parse()
+                .unwrap_or(border_px);
             border_px = v;
         }
     }
 
     let mut out = String::from("# Imported from Sway/i3 config — review and adjust before use\n\n");
     out.push_str("[gaps.windows]\n");
-    out.push_str(&format!("inner_px = {gaps_inner}\nouter_px = {gaps_outer}\n\n"));
+    out.push_str(&format!(
+        "inner_px = {gaps_inner}\nouter_px = {gaps_outer}\n\n"
+    ));
     out.push_str("[window.focused]\n");
     out.push_str(&format!("border_px = {border_px}\n\n"));
 
@@ -812,10 +847,17 @@ fn import_niri(src: &str) -> String {
                     let mods_toml = if mods_vec.is_empty() {
                         String::new()
                     } else {
-                        let joined = mods_vec.iter().map(|m| format!("{m:?}")).collect::<Vec<_>>().join(", ");
+                        let joined = mods_vec
+                            .iter()
+                            .map(|m| format!("{m:?}"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
                         format!("mods = [{joined}]\n")
                     };
-                    binds.push(format!("[[bind]]\n{}key = {:?}\naction = {:?}", mods_toml, key, action));
+                    binds.push(format!(
+                        "[[bind]]\n{}key = {:?}\naction = {:?}",
+                        mods_toml, key, action
+                    ));
                 } else {
                     unmapped.push(format!("# UNMAPPED: {line}"));
                 }
@@ -823,11 +865,23 @@ fn import_niri(src: &str) -> String {
         }
 
         if line.starts_with("gaps") {
-            let v: i32 = line.split_whitespace().last().unwrap_or("").trim_end_matches(';').parse().unwrap_or(gaps);
+            let v: i32 = line
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .trim_end_matches(';')
+                .parse()
+                .unwrap_or(gaps);
             gaps = v;
         }
         if line.starts_with("border { width") || line.starts_with("border-width") {
-            let v: i32 = line.split_whitespace().last().unwrap_or("").trim_end_matches(';').parse().unwrap_or(border_px);
+            let v: i32 = line
+                .split_whitespace()
+                .last()
+                .unwrap_or("")
+                .trim_end_matches(';')
+                .parse()
+                .unwrap_or(border_px);
             border_px = v;
         }
     }

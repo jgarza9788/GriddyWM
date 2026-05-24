@@ -14,8 +14,8 @@ use smithay::{
         xwayland_shell::{XWaylandShellHandler, XWaylandShellState},
     },
     xwayland::{
-        xwm::{ResizeEdge, Reorder, WmWindowProperty, XwmId},
         X11Surface, X11Wm, XwmHandler,
+        xwm::{Reorder, ResizeEdge, WmWindowProperty, XwmId},
     },
 };
 
@@ -77,11 +77,7 @@ impl XwmHandler for GlobalState {
     ) {
         let geo = window.geometry();
         let new_rect = Rectangle::new(
-            (
-                x.unwrap_or(geo.loc.x),
-                y.unwrap_or(geo.loc.y),
-            )
-                .into(),
+            (x.unwrap_or(geo.loc.x), y.unwrap_or(geo.loc.y)).into(),
             (
                 w.map(|v| v as i32).unwrap_or(geo.size.w),
                 h.map(|v| v as i32).unwrap_or(geo.size.h),

@@ -1,9 +1,9 @@
 //! Action enum and dispatcher — maps keybind actions to compositor state mutations.
 
-use smithay::utils::{Serial, SERIAL_COUNTER};
+use smithay::utils::{SERIAL_COUNTER, Serial};
 
 use crate::animate::{self, MoveAnim, WorkspaceSlide};
-use crate::grid::{window::Slot, FocusDirection, MoveDirectionResult, PlacementHints};
+use crate::grid::{FocusDirection, MoveDirectionResult, PlacementHints, window::Slot};
 use crate::ipc::events::Event;
 use crate::state::GlobalState;
 
@@ -156,76 +156,77 @@ pub fn parse_action(action: &str, args: &[String]) -> Option<Action> {
             let cmd = args.join(" ");
             (!cmd.is_empty()).then_some(Action::Exec(cmd))
         }
-        "close-window"                   => Some(Action::CloseWindow),
-        "quit"                           => Some(Action::Quit),
-        "reload-config"                  => Some(Action::ReloadConfig),
-        "reload-theme"                   => Some(Action::ReloadTheme),
+        "close-window" => Some(Action::CloseWindow),
+        "quit" => Some(Action::Quit),
+        "reload-config" => Some(Action::ReloadConfig),
+        "reload-theme" => Some(Action::ReloadTheme),
         "osd-show" => {
             let text = args.first().cloned().unwrap_or_default();
             Some(Action::OsdShow(text))
         }
-        "cycle-shader"                   => Some(Action::CycleShader),
-        "cheatsheet-toggle"              => Some(Action::CheatsheetToggle),
-        "debug-overlay-toggle"           => Some(Action::DebugOverlayToggle),
-        "center-floating"                => Some(Action::CenterFloating),
-        "workspace-left"                 => Some(Action::WorkspaceLeft),
-        "workspace-right"                => Some(Action::WorkspaceRight),
-        "workspace-up"                   => Some(Action::WorkspaceUp),
-        "workspace-down"                 => Some(Action::WorkspaceDown),
-        "workspace-nw"                   => Some(Action::WorkspaceNW),
-        "workspace-ne"                   => Some(Action::WorkspaceNE),
-        "workspace-sw"                   => Some(Action::WorkspaceSW),
-        "workspace-se"                   => Some(Action::WorkspaceSE),
-        "workspace-back"                 => Some(Action::WorkspaceBack),
-        "workspace-forward"              => Some(Action::WorkspaceForward),
-        "workspace-index"                => args.first()?.parse().ok().map(Action::WorkspaceIndex),
+        "cycle-shader" => Some(Action::CycleShader),
+        "cheatsheet-toggle" => Some(Action::CheatsheetToggle),
+        "debug-overlay-toggle" => Some(Action::DebugOverlayToggle),
+        "center-floating" => Some(Action::CenterFloating),
+        "workspace-left" => Some(Action::WorkspaceLeft),
+        "workspace-right" => Some(Action::WorkspaceRight),
+        "workspace-up" => Some(Action::WorkspaceUp),
+        "workspace-down" => Some(Action::WorkspaceDown),
+        "workspace-nw" => Some(Action::WorkspaceNW),
+        "workspace-ne" => Some(Action::WorkspaceNE),
+        "workspace-sw" => Some(Action::WorkspaceSW),
+        "workspace-se" => Some(Action::WorkspaceSE),
+        "workspace-back" => Some(Action::WorkspaceBack),
+        "workspace-forward" => Some(Action::WorkspaceForward),
+        "workspace-index" => args.first()?.parse().ok().map(Action::WorkspaceIndex),
         "workspace" => {
             // workspace col,row
             let coord = args.first()?;
             let (c, r) = coord.split_once(',')?;
             Some(Action::WorkspaceTo(c.parse().ok()?, r.parse().ok()?))
         }
-        "workspace-direction" => {
-            match args.first().map(|s| s.as_str()) {
-                Some("left")  => Some(Action::WorkspaceLeft),
-                Some("right") => Some(Action::WorkspaceRight),
-                Some("up")    => Some(Action::WorkspaceUp),
-                Some("down")  => Some(Action::WorkspaceDown),
-                _ => None,
-            }
-        }
-        "focus-left"                     => Some(Action::FocusLeft),
-        "focus-right"                    => Some(Action::FocusRight),
-        "focus-up"                       => Some(Action::FocusUp),
-        "focus-down"                     => Some(Action::FocusDown),
-        "state-fullscreen-toggle"        => Some(Action::StateFullscreenToggle),
-        "state-total-fullscreen-toggle"  => Some(Action::StateTotalFullscreenToggle),
-        "state-floating-toggle"          => Some(Action::StateFloatingToggle),
-        "slot-half-left"                 => Some(Action::SlotHalfLeft),
-        "slot-half-right"                => Some(Action::SlotHalfRight),
-        "slot-quarter-tl"                => Some(Action::SlotQuarterTL),
-        "slot-quarter-tr"                => Some(Action::SlotQuarterTR),
-        "slot-quarter-bl"                => Some(Action::SlotQuarterBL),
-        "slot-quarter-br"                => Some(Action::SlotQuarterBR),
-        "stack-next"                     => Some(Action::StackNext),
-        "stack-prev"                     => Some(Action::StackPrev),
-        "stack-promote"                  => Some(Action::StackPromote),
-        "stack-collapse"                 => Some(Action::StackCollapse),
-        "stack-move-up"                  => Some(Action::StackMoveUp),
-        "stack-move-down"                => Some(Action::StackMoveDown),
-        "total-fullscreen-exit"          => Some(Action::TotalFullscreenExit),
-        "workspace-sync-toggle"          => Some(Action::WorkspaceSync),
+        "workspace-direction" => match args.first().map(|s| s.as_str()) {
+            Some("left") => Some(Action::WorkspaceLeft),
+            Some("right") => Some(Action::WorkspaceRight),
+            Some("up") => Some(Action::WorkspaceUp),
+            Some("down") => Some(Action::WorkspaceDown),
+            _ => None,
+        },
+        "focus-left" => Some(Action::FocusLeft),
+        "focus-right" => Some(Action::FocusRight),
+        "focus-up" => Some(Action::FocusUp),
+        "focus-down" => Some(Action::FocusDown),
+        "state-fullscreen-toggle" => Some(Action::StateFullscreenToggle),
+        "state-total-fullscreen-toggle" => Some(Action::StateTotalFullscreenToggle),
+        "state-floating-toggle" => Some(Action::StateFloatingToggle),
+        "slot-half-left" => Some(Action::SlotHalfLeft),
+        "slot-half-right" => Some(Action::SlotHalfRight),
+        "slot-quarter-tl" => Some(Action::SlotQuarterTL),
+        "slot-quarter-tr" => Some(Action::SlotQuarterTR),
+        "slot-quarter-bl" => Some(Action::SlotQuarterBL),
+        "slot-quarter-br" => Some(Action::SlotQuarterBR),
+        "stack-next" => Some(Action::StackNext),
+        "stack-prev" => Some(Action::StackPrev),
+        "stack-promote" => Some(Action::StackPromote),
+        "stack-collapse" => Some(Action::StackCollapse),
+        "stack-move-up" => Some(Action::StackMoveUp),
+        "stack-move-down" => Some(Action::StackMoveDown),
+        "total-fullscreen-exit" => Some(Action::TotalFullscreenExit),
+        "workspace-sync-toggle" => Some(Action::WorkspaceSync),
         "workspace-rename" => {
             let col: u8 = args.first()?.parse().ok()?;
             let row: u8 = args.get(1)?.parse().ok()?;
             let name = args.get(2).cloned().unwrap_or_default();
             Some(Action::WorkspaceRename(col, row, name))
         }
-        "minimap-toggle"                 => Some(Action::MinimapToggle),
+        "minimap-toggle" => Some(Action::MinimapToggle),
         "move-window-to-workspace-and-follow" => {
             let coord = args.first()?;
             let (c, r) = coord.split_once(',')?;
-            Some(Action::MoveWindowToWorkspaceAndFollow(c.parse().ok()?, r.parse().ok()?))
+            Some(Action::MoveWindowToWorkspaceAndFollow(
+                c.parse().ok()?,
+                r.parse().ok()?,
+            ))
         }
         "spawn-floating" => {
             let cmd = args.join(" ");
@@ -241,20 +242,24 @@ pub fn parse_action(action: &str, args: &[String]) -> Option<Action> {
             let coord = args.first()?;
             let (c, r) = coord.split_once(',')?;
             let cmd = args[1..].join(" ");
-            (!cmd.is_empty()).then_some(Action::SpawnOnWorkspace(c.parse().ok()?, r.parse().ok()?, cmd))
+            (!cmd.is_empty()).then_some(Action::SpawnOnWorkspace(
+                c.parse().ok()?,
+                r.parse().ok()?,
+                cmd,
+            ))
         }
         "spawn-stacked" => {
             let cmd = args.join(" ");
             (!cmd.is_empty()).then_some(Action::SpawnStacked(cmd))
         }
-        "move-window-direction"  => parse_direction(args.first()?).map(Action::MoveWindowDirection),
-        "move-window-to-index"   => args.first()?.parse().ok().map(Action::MoveWindowToIndex),
+        "move-window-direction" => parse_direction(args.first()?).map(Action::MoveWindowDirection),
+        "move-window-to-index" => args.first()?.parse().ok().map(Action::MoveWindowToIndex),
         "move-window-to" => {
             let coord = args.first()?;
             let (c, r) = coord.split_once(',')?;
             Some(Action::MoveWindowTo(c.parse().ok()?, r.parse().ok()?))
         }
-        "resize-active"          => {
+        "resize-active" => {
             let dx = args.first().and_then(|s| s.parse().ok()).unwrap_or(0i32);
             let dy = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(0i32);
             Some(Action::ResizeActive(dx, dy))
@@ -268,22 +273,20 @@ pub fn parse_action(action: &str, args: &[String]) -> Option<Action> {
             }
         }
         "submap-reset" => Some(Action::SubmapReset),
-        "overview-toggle"       => Some(Action::OverviewToggle),
-        "overview-activate"     => Some(Action::OverviewActivate),
-        "overview-window-next"  => Some(Action::OverviewWindowNext),
-        "overview-window-prev"  => Some(Action::OverviewWindowPrev),
-        "overview-grab-window"  => Some(Action::OverviewGrabWindow),
-        "overview-drop-window"  => Some(Action::OverviewDropWindow),
-        "overview-cancel-grab"  => Some(Action::OverviewCancelGrab),
-        "overview-focus-direction" => {
-            match args.first().map(|s| s.as_str()) {
-                Some("left")  => Some(Action::OverviewFocusLeft),
-                Some("right") => Some(Action::OverviewFocusRight),
-                Some("up")    => Some(Action::OverviewFocusUp),
-                Some("down")  => Some(Action::OverviewFocusDown),
-                _ => None,
-            }
-        }
+        "overview-toggle" => Some(Action::OverviewToggle),
+        "overview-activate" => Some(Action::OverviewActivate),
+        "overview-window-next" => Some(Action::OverviewWindowNext),
+        "overview-window-prev" => Some(Action::OverviewWindowPrev),
+        "overview-grab-window" => Some(Action::OverviewGrabWindow),
+        "overview-drop-window" => Some(Action::OverviewDropWindow),
+        "overview-cancel-grab" => Some(Action::OverviewCancelGrab),
+        "overview-focus-direction" => match args.first().map(|s| s.as_str()) {
+            Some("left") => Some(Action::OverviewFocusLeft),
+            Some("right") => Some(Action::OverviewFocusRight),
+            Some("up") => Some(Action::OverviewFocusUp),
+            Some("down") => Some(Action::OverviewFocusDown),
+            _ => None,
+        },
         "screenshot" => {
             let mode = args.first().cloned().unwrap_or_else(|| "region".into());
             Some(Action::Screenshot(mode))
@@ -317,7 +320,7 @@ pub fn parse_action(action: &str, args: &[String]) -> Option<Action> {
             Some(Action::MoveWindowTo(c.parse().ok()?, r.parse().ok()?))
         }
         "overview-peek" => Some(Action::OverviewPeek),
-        "stack-peek"    => Some(Action::StackPeek),
+        "stack-peek" => Some(Action::StackPeek),
         "set-window-shader" => {
             let mut it = args.iter();
             let id: u64 = it.next().and_then(|s| s.parse().ok())?;
@@ -334,23 +337,23 @@ pub fn parse_action(action: &str, args: &[String]) -> Option<Action> {
 
 fn parse_direction(s: &str) -> Option<FocusDirection> {
     match s {
-        "left"  => Some(FocusDirection::Left),
+        "left" => Some(FocusDirection::Left),
         "right" => Some(FocusDirection::Right),
-        "up"    => Some(FocusDirection::Up),
-        "down"  => Some(FocusDirection::Down),
-        _       => None,
+        "up" => Some(FocusDirection::Up),
+        "down" => Some(FocusDirection::Down),
+        _ => None,
     }
 }
 
 fn parse_slot(s: &str) -> Option<Slot> {
     match s {
-        "HalfLeft"   | "half-left"   => Some(Slot::HalfLeft),
-        "HalfRight"  | "half-right"  => Some(Slot::HalfRight),
-        "QuarterTL"  | "quarter-tl"  => Some(Slot::QuarterTL),
-        "QuarterTR"  | "quarter-tr"  => Some(Slot::QuarterTR),
-        "QuarterBL"  | "quarter-bl"  => Some(Slot::QuarterBL),
-        "QuarterBR"  | "quarter-br"  => Some(Slot::QuarterBR),
-        "Fullscreen" | "fullscreen"  => None, // not a tiled slot
+        "HalfLeft" | "half-left" => Some(Slot::HalfLeft),
+        "HalfRight" | "half-right" => Some(Slot::HalfRight),
+        "QuarterTL" | "quarter-tl" => Some(Slot::QuarterTL),
+        "QuarterTR" | "quarter-tr" => Some(Slot::QuarterTR),
+        "QuarterBL" | "quarter-bl" => Some(Slot::QuarterBL),
+        "QuarterBR" | "quarter-br" => Some(Slot::QuarterBR),
+        "Fullscreen" | "fullscreen" => None, // not a tiled slot
         _ => None,
     }
 }
@@ -360,9 +363,15 @@ fn parse_slot(s: &str) -> Option<Slot> {
 /// Execute an action. Returns `true` if the compositor should exit.
 pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
     match action {
-        Action::Exec(cmd)    => { exec_cmd(&cmd); false }
-        Action::CloseWindow  => { state.grid.close_focused(); false }
-        Action::Quit         => true,
+        Action::Exec(cmd) => {
+            exec_cmd(&cmd);
+            false
+        }
+        Action::CloseWindow => {
+            state.grid.close_focused();
+            false
+        }
+        Action::Quit => true,
 
         Action::ReloadConfig => {
             state.reload_config_if_changed(true);
@@ -391,7 +400,7 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
         }
         Action::CheatsheetToggle => {
             if let Some(pid) = state.cheatsheet_pid.take() {
-                use nix::sys::signal::{kill, Signal};
+                use nix::sys::signal::{Signal, kill};
                 use nix::unistd::Pid;
                 match kill(Pid::from_raw(pid as i32), Signal::SIGTERM) {
                     Ok(()) => {
@@ -428,15 +437,39 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             false
         }
 
-        Action::WorkspaceLeft  => { nav_workspace(state, FocusDirection::Left);  false }
-        Action::WorkspaceRight => { nav_workspace(state, FocusDirection::Right); false }
-        Action::WorkspaceUp    => { nav_workspace(state, FocusDirection::Up);    false }
-        Action::WorkspaceDown  => { nav_workspace(state, FocusDirection::Down);  false }
-        Action::WorkspaceNW    => { nav_workspace_diagonal(state, -1, -1); false }
-        Action::WorkspaceNE    => { nav_workspace_diagonal(state,  1, -1); false }
-        Action::WorkspaceSW    => { nav_workspace_diagonal(state, -1,  1); false }
-        Action::WorkspaceSE    => { nav_workspace_diagonal(state,  1,  1); false }
-        Action::WorkspaceBack  => {
+        Action::WorkspaceLeft => {
+            nav_workspace(state, FocusDirection::Left);
+            false
+        }
+        Action::WorkspaceRight => {
+            nav_workspace(state, FocusDirection::Right);
+            false
+        }
+        Action::WorkspaceUp => {
+            nav_workspace(state, FocusDirection::Up);
+            false
+        }
+        Action::WorkspaceDown => {
+            nav_workspace(state, FocusDirection::Down);
+            false
+        }
+        Action::WorkspaceNW => {
+            nav_workspace_diagonal(state, -1, -1);
+            false
+        }
+        Action::WorkspaceNE => {
+            nav_workspace_diagonal(state, 1, -1);
+            false
+        }
+        Action::WorkspaceSW => {
+            nav_workspace_diagonal(state, -1, 1);
+            false
+        }
+        Action::WorkspaceSE => {
+            nav_workspace_diagonal(state, 1, 1);
+            false
+        }
+        Action::WorkspaceBack => {
             let old = state.grid.focused;
             state.grid.workspace_back();
             trigger_slide(state, old);
@@ -471,11 +504,11 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             false
         }
         Action::WorkspaceIndex(n) => {
-            let old  = state.grid.focused;
+            let old = state.grid.focused;
             let cols = state.grid.cols as usize;
-            let idx  = n.saturating_sub(1) as usize;
-            let col  = (idx % cols) as u8;
-            let row  = (idx / cols) as u8;
+            let idx = n.saturating_sub(1) as usize;
+            let col = (idx % cols) as u8;
+            let row = (idx / cols) as u8;
             state.grid.switch_workspace((col, row));
             apply_workspace_template(state, (col, row), false);
             trigger_slide(state, old);
@@ -487,10 +520,30 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             false
         }
 
-        Action::FocusLeft  => { state.grid.move_focus(FocusDirection::Left);  sync_focus(state); emit_focus_changed(state); false }
-        Action::FocusRight => { state.grid.move_focus(FocusDirection::Right); sync_focus(state); emit_focus_changed(state); false }
-        Action::FocusUp    => { state.grid.move_focus(FocusDirection::Up);    sync_focus(state); emit_focus_changed(state); false }
-        Action::FocusDown  => { state.grid.move_focus(FocusDirection::Down);  sync_focus(state); emit_focus_changed(state); false }
+        Action::FocusLeft => {
+            state.grid.move_focus(FocusDirection::Left);
+            sync_focus(state);
+            emit_focus_changed(state);
+            false
+        }
+        Action::FocusRight => {
+            state.grid.move_focus(FocusDirection::Right);
+            sync_focus(state);
+            emit_focus_changed(state);
+            false
+        }
+        Action::FocusUp => {
+            state.grid.move_focus(FocusDirection::Up);
+            sync_focus(state);
+            emit_focus_changed(state);
+            false
+        }
+        Action::FocusDown => {
+            state.grid.move_focus(FocusDirection::Down);
+            sync_focus(state);
+            emit_focus_changed(state);
+            false
+        }
 
         Action::StateFullscreenToggle => {
             with_move_anim(state, |s| s.grid.toggle_fullscreen());
@@ -500,7 +553,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
         }
         Action::StateTotalFullscreenToggle => {
             // Check state before toggle to determine direction for power-profile hook.
-            let was_tf = state.grid.focused_window
+            let was_tf = state
+                .grid
+                .focused_window
                 .and_then(|id| state.grid.windows.get(&id))
                 .map(|w| w.current_state == crate::grid::window::WindowState::TotalFullscreen)
                 .unwrap_or(false);
@@ -524,31 +579,90 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             false
         }
 
-        Action::SlotHalfLeft   => { with_move_anim(state, |s| s.grid.assign_slot(Slot::HalfLeft));   emit_window_state_slot_changed(state); false }
-        Action::SlotHalfRight  => { with_move_anim(state, |s| s.grid.assign_slot(Slot::HalfRight));  emit_window_state_slot_changed(state); false }
-        Action::SlotQuarterTL  => { with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterTL));  emit_window_state_slot_changed(state); false }
-        Action::SlotQuarterTR  => { with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterTR));  emit_window_state_slot_changed(state); false }
-        Action::SlotQuarterBL  => { with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterBL));  emit_window_state_slot_changed(state); false }
-        Action::SlotQuarterBR  => { with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterBR));  emit_window_state_slot_changed(state); false }
+        Action::SlotHalfLeft => {
+            with_move_anim(state, |s| s.grid.assign_slot(Slot::HalfLeft));
+            emit_window_state_slot_changed(state);
+            false
+        }
+        Action::SlotHalfRight => {
+            with_move_anim(state, |s| s.grid.assign_slot(Slot::HalfRight));
+            emit_window_state_slot_changed(state);
+            false
+        }
+        Action::SlotQuarterTL => {
+            with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterTL));
+            emit_window_state_slot_changed(state);
+            false
+        }
+        Action::SlotQuarterTR => {
+            with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterTR));
+            emit_window_state_slot_changed(state);
+            false
+        }
+        Action::SlotQuarterBL => {
+            with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterBL));
+            emit_window_state_slot_changed(state);
+            false
+        }
+        Action::SlotQuarterBR => {
+            with_move_anim(state, |s| s.grid.assign_slot(Slot::QuarterBR));
+            emit_window_state_slot_changed(state);
+            false
+        }
 
-        Action::StackNext      => { state.grid.stack_next();    sync_focus(state); emit_stack_changed(state); false }
-        Action::StackPrev      => { state.grid.stack_prev();    sync_focus(state); emit_stack_changed(state); false }
-        Action::StackFlip(n)   => { state.grid.stack_flip(n);   sync_focus(state); emit_stack_changed(state); emit_stack_reordered(state); false }
-        Action::StackPromote   => { state.grid.stack_promote(); sync_focus(state); emit_stack_changed(state); false }
-        Action::StackCollapse  => {
+        Action::StackNext => {
+            state.grid.stack_next();
+            sync_focus(state);
+            emit_stack_changed(state);
+            false
+        }
+        Action::StackPrev => {
+            state.grid.stack_prev();
+            sync_focus(state);
+            emit_stack_changed(state);
+            false
+        }
+        Action::StackFlip(n) => {
+            state.grid.stack_flip(n);
+            sync_focus(state);
+            emit_stack_changed(state);
+            emit_stack_reordered(state);
+            false
+        }
+        Action::StackPromote => {
+            state.grid.stack_promote();
+            sync_focus(state);
+            emit_stack_changed(state);
+            false
+        }
+        Action::StackCollapse => {
             with_move_anim(state, |s| s.grid.stack_collapse());
             sync_focus(state);
             emit_stack_changed(state);
             false
         }
-        Action::StackMoveUp    => { state.grid.stack_move_up();   sync_focus(state); emit_stack_changed(state); emit_stack_reordered(state); false }
-        Action::StackMoveDown  => { state.grid.stack_move_down(); sync_focus(state); emit_stack_changed(state); emit_stack_reordered(state); false }
+        Action::StackMoveUp => {
+            state.grid.stack_move_up();
+            sync_focus(state);
+            emit_stack_changed(state);
+            emit_stack_reordered(state);
+            false
+        }
+        Action::StackMoveDown => {
+            state.grid.stack_move_down();
+            sync_focus(state);
+            emit_stack_changed(state);
+            emit_stack_reordered(state);
+            false
+        }
 
         Action::MoveWindowDirection(dir) => {
             let win_id = state.grid.focused_window;
             // Snapshot rects, run the move, detect skips, emit events.
             let duration_ms = state.anim_duration(state.config.view.slide_duration_ms as u64 / 2);
-            let before: Vec<_> = state.grid.visible_windows()
+            let before: Vec<_> = state
+                .grid
+                .visible_windows()
                 .into_iter()
                 .map(|(w, r)| (w.id, r))
                 .collect();
@@ -562,7 +676,11 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             }
             if let Some(id) = win_id {
                 match result {
-                    Some(MoveDirectionResult::Moved { requested, actual, skipped: true }) => {
+                    Some(MoveDirectionResult::Moved {
+                        requested,
+                        actual,
+                        skipped: true,
+                    }) => {
                         state.pending_events.push(Event::WindowMoveSkipped {
                             id,
                             requested_col: requested.0,
@@ -587,15 +705,17 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
         }
         Action::MoveWindowToIndex(n) => {
             let cols = state.grid.cols as usize;
-            let idx  = n.saturating_sub(1) as usize;
-            let col  = (idx % cols) as u8;
-            let row  = (idx / cols) as u8;
+            let idx = n.saturating_sub(1) as usize;
+            let col = (idx % cols) as u8;
+            let row = (idx / cols) as u8;
             if let Some(id) = state.grid.focused_window {
                 if move_to_tf_protected(state, id, col, row) {
                     return false;
                 }
                 with_move_anim(state, |s| s.grid.move_window_to((col, row)));
-                state.pending_events.push(Event::WindowMoved { id, col, row });
+                state
+                    .pending_events
+                    .push(Event::WindowMoved { id, col, row });
             }
             sync_focus(state);
             false
@@ -606,7 +726,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
                     return false;
                 }
                 with_move_anim(state, |s| s.grid.move_window_to((col, row)));
-                state.pending_events.push(Event::WindowMoved { id, col, row });
+                state
+                    .pending_events
+                    .push(Event::WindowMoved { id, col, row });
             }
             sync_focus(state);
             false
@@ -627,7 +749,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
 
         Action::TotalFullscreenExit => {
             // Exit total-fullscreen only if the focused window is in that state.
-            let was_tf = state.grid.focused_window
+            let was_tf = state
+                .grid
+                .focused_window
                 .and_then(|id| state.grid.windows.get(&id))
                 .map(|w| w.current_state == crate::grid::window::WindowState::TotalFullscreen)
                 .unwrap_or(false);
@@ -643,7 +767,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
 
         Action::WorkspaceSync => {
             state.workspace_synced = !state.workspace_synced;
-            state.pending_events.push(Event::WorkspaceSyncChanged { synced: state.workspace_synced });
+            state.pending_events.push(Event::WorkspaceSyncChanged {
+                synced: state.workspace_synced,
+            });
             tracing::debug!(synced = state.workspace_synced, "workspace-sync toggled");
             false
         }
@@ -651,13 +777,20 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
         Action::WorkspaceRename(col, row, name) => {
             let old_name = state.grid.workspace_name(col, row).to_owned();
             state.grid.rename_workspace(col, row, name.clone());
-            state.pending_events.push(Event::WorkspaceRenamed { col, row, old: old_name, new: name });
+            state.pending_events.push(Event::WorkspaceRenamed {
+                col,
+                row,
+                old: old_name,
+                new: name,
+            });
             false
         }
 
         Action::MinimapToggle => {
             state.minimap_visible = !state.minimap_visible;
-            state.pending_events.push(Event::MinimapToggled { visible: state.minimap_visible });
+            state.pending_events.push(Event::MinimapToggled {
+                visible: state.minimap_visible,
+            });
             tracing::debug!(visible = state.minimap_visible, "minimap toggled");
             false
         }
@@ -702,7 +835,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
 
         Action::SpawnStacked(cmd) => {
             // Spawn into the currently focused slot's stack (if any).
-            let slot = state.grid.focused_window
+            let slot = state
+                .grid
+                .focused_window
                 .and_then(|id| state.grid.windows.get(&id))
                 .and_then(|w| w.current_slot);
             state.spawn_hint = Some(PlacementHints {
@@ -717,7 +852,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             if state.submap_tables.contains_key(&name) {
                 tracing::debug!(submap = %name, "Entering submap");
                 state.active_submap = Some(name.clone());
-                state.pending_events.push(Event::SubMapChanged { name: name.clone() });
+                state
+                    .pending_events
+                    .push(Event::SubMapChanged { name: name.clone() });
                 state.show_osd("submap");
             } else {
                 tracing::warn!(submap = %name, "Unknown submap — ignoring");
@@ -729,7 +866,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
                 tracing::debug!(submap = %name, "Exiting submap");
             }
             state.active_submap = None;
-            state.pending_events.push(Event::SubMapChanged { name: String::new() });
+            state.pending_events.push(Event::SubMapChanged {
+                name: String::new(),
+            });
             // Hide OSD on submap exit.
             state.osd_hide_at = None;
             state.osd_kind = None;
@@ -758,7 +897,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
                 }
                 state.overview_window_idx = 0;
                 state.pending_events.push(Event::OverviewClosed);
-                state.pending_events.push(Event::ViewModeChanged { mode: "focus".into() });
+                state.pending_events.push(Event::ViewModeChanged {
+                    mode: "focus".into(),
+                });
             }
             false
         }
@@ -814,7 +955,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
                 state.is_overview = false;
                 state.overview_window_idx = 0;
                 state.pending_events.push(Event::OverviewClosed);
-                state.pending_events.push(Event::ViewModeChanged { mode: "focus".into() });
+                state.pending_events.push(Event::ViewModeChanged {
+                    mode: "focus".into(),
+                });
                 dispatch(Action::WorkspaceTo(target.0, target.1), state);
                 // Override focus to the Tab-selected window if set.
                 if let Some(id) = selected_id {
@@ -875,7 +1018,7 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             let cmd = match mode.as_str() {
                 "region" => "grim -g \"$(slurp)\" - | wl-copy",
                 "screen" => "grim - | wl-copy",
-                _        => "grim - | wl-copy",
+                _ => "grim - | wl-copy",
             };
             exec_cmd(cmd);
             false
@@ -914,7 +1057,11 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
         Action::MoveToSpecial(name) => {
             if let Some(win_id) = state.grid.focused_window {
                 state.grid.detach_window_to_special(win_id);
-                state.special_workspaces.entry(name).or_default().push(win_id);
+                state
+                    .special_workspaces
+                    .entry(name)
+                    .or_default()
+                    .push(win_id);
                 sync_focus(state);
             }
             false
@@ -928,9 +1075,13 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             if state.is_overview_peeking {
                 state.overview_focused = state.grid.focused;
                 state.overview_window_idx = 0;
-                state.pending_events.push(Event::ViewModeChanged { mode: "overview".into() });
+                state.pending_events.push(Event::ViewModeChanged {
+                    mode: "overview".into(),
+                });
             } else {
-                state.pending_events.push(Event::ViewModeChanged { mode: "focus".into() });
+                state.pending_events.push(Event::ViewModeChanged {
+                    mode: "focus".into(),
+                });
             }
             false
         }
@@ -944,9 +1095,16 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
 
         Action::SetWindowShader(id, path) => {
             if let Some(w) = state.grid.windows.get_mut(&id) {
-                w.shader = if path.is_empty() || path == "clear" { None } else { Some(path.clone()) };
+                w.shader = if path.is_empty() || path == "clear" {
+                    None
+                } else {
+                    Some(path.clone())
+                };
                 let path_ref = w.shader.as_deref().unwrap_or("(cleared)");
-                state.pending_events.push(Event::ShaderLoaded { category: "window".into(), path: path_ref.into() });
+                state.pending_events.push(Event::ShaderLoaded {
+                    category: "window".into(),
+                    path: path_ref.into(),
+                });
                 tracing::info!(id, path = path_ref, "set-window-shader");
             } else {
                 tracing::warn!(id, "set-window-shader: window not found");
@@ -960,7 +1118,10 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
                 tracing::info!("screen-shader cleared");
             } else {
                 state.screen_shader = Some(path.clone());
-                state.pending_events.push(Event::ShaderLoaded { category: "screen".into(), path: path.clone() });
+                state.pending_events.push(Event::ShaderLoaded {
+                    category: "screen".into(),
+                    path: path.clone(),
+                });
                 tracing::info!(path, "screen-shader set");
             }
             false
@@ -985,8 +1146,12 @@ pub fn sync_focus(state: &mut GlobalState) {
 
 /// Warp the pointer to the center of the currently focused window (§22.5).
 pub fn warp_cursor_to_focused(state: &mut GlobalState) {
-    let Some(id) = state.grid.focused_window else { return };
-    let Some(rect) = state.grid.compute_rect(id) else { return };
+    let Some(id) = state.grid.focused_window else {
+        return;
+    };
+    let Some(rect) = state.grid.compute_rect(id) else {
+        return;
+    };
     let cx = rect.x + rect.w / 2;
     let cy = rect.y + rect.h / 2;
     state.cursor_pos = (cx as f64, cy as f64);
@@ -1032,10 +1197,20 @@ pub fn spawn_cheatsheet_window(configured_terminal: &str) -> Option<u32> {
 fn detect_terminal() -> String {
     use std::os::unix::fs::PermissionsExt;
     let path_var = std::env::var("PATH").unwrap_or_default();
-    for candidate in ["foot", "kitty", "alacritty", "wezterm", "xterm", "urxvt", "konsole"] {
+    for candidate in [
+        "foot",
+        "kitty",
+        "alacritty",
+        "wezterm",
+        "xterm",
+        "urxvt",
+        "konsole",
+    ] {
         let found = path_var.split(':').any(|dir| {
             let p = std::path::Path::new(dir).join(candidate);
-            p.metadata().map(|m| m.permissions().mode() & 0o111 != 0).unwrap_or(false)
+            p.metadata()
+                .map(|m| m.permissions().mode() & 0o111 != 0)
+                .unwrap_or(false)
         });
         if found {
             return candidate.to_owned();
@@ -1049,21 +1224,40 @@ fn detect_terminal() -> String {
 /// stays open until the user presses `q`.
 fn cheatsheet_cmd_for(terminal: &str) -> (String, Vec<String>) {
     let inner = "griddyctl cheatsheet | less; read -rp 'Press Enter to close...'";
-    let sh_args = vec![
-        "sh".to_owned(),
-        "-c".to_owned(),
-        inner.to_owned(),
-    ];
+    let sh_args = vec!["sh".to_owned(), "-c".to_owned(), inner.to_owned()];
 
     let (prog, mut prefix): (_, Vec<String>) = match terminal {
-        "foot"       => ("foot".into(),       vec!["-T".into(), "GriddyWM Keybinds".into()]),
-        "kitty"      => ("kitty".into(),      vec!["--title".into(), "GriddyWM Keybinds".into()]),
-        "alacritty"  => ("alacritty".into(),  vec!["--title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
-        "wezterm"    => ("wezterm".into(),     vec!["start".into(), "--title".into(), "GriddyWM Keybinds".into(), "--".into()]),
-        "konsole"    => ("konsole".into(),     vec!["--title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
-        "urxvt"      => ("urxvt".into(),      vec!["-title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
+        "foot" => ("foot".into(), vec!["-T".into(), "GriddyWM Keybinds".into()]),
+        "kitty" => (
+            "kitty".into(),
+            vec!["--title".into(), "GriddyWM Keybinds".into()],
+        ),
+        "alacritty" => (
+            "alacritty".into(),
+            vec!["--title".into(), "GriddyWM Keybinds".into(), "-e".into()],
+        ),
+        "wezterm" => (
+            "wezterm".into(),
+            vec![
+                "start".into(),
+                "--title".into(),
+                "GriddyWM Keybinds".into(),
+                "--".into(),
+            ],
+        ),
+        "konsole" => (
+            "konsole".into(),
+            vec!["--title".into(), "GriddyWM Keybinds".into(), "-e".into()],
+        ),
+        "urxvt" => (
+            "urxvt".into(),
+            vec!["-title".into(), "GriddyWM Keybinds".into(), "-e".into()],
+        ),
         // Generic xterm-compatible fallback: -title + -e
-        _            => (terminal.to_owned(), vec!["-title".into(), "GriddyWM Keybinds".into(), "-e".into()]),
+        _ => (
+            terminal.to_owned(),
+            vec!["-title".into(), "GriddyWM Keybinds".into(), "-e".into()],
+        ),
     };
 
     prefix.extend(sh_args);
@@ -1075,7 +1269,7 @@ fn exec_cmd(cmd: &str) {
     if let Some((prog, args)) = parts.split_first() {
         match std::process::Command::new(prog).args(args).spawn() {
             Ok(child) => tracing::info!(pid = child.id(), "Spawned {}", prog),
-            Err(e)    => tracing::warn!("Failed to spawn {}: {}", prog, e),
+            Err(e) => tracing::warn!("Failed to spawn {}: {}", prog, e),
         }
     }
 }
@@ -1093,7 +1287,9 @@ fn shell_split(s: &str) -> Vec<String> {
             // Single-quoted: everything until the closing ' is literal.
             '\'' => {
                 for inner in chars.by_ref() {
-                    if inner == '\'' { break; }
+                    if inner == '\'' {
+                        break;
+                    }
                     current.push(inner);
                 }
             }
@@ -1154,23 +1350,39 @@ fn move_to_tf_protected(state: &mut GlobalState, id: u64, col: u8, row: u8) -> b
 }
 
 fn emit_window_state_slot_changed(state: &mut GlobalState) {
-    let Some(id) = state.grid.focused_window else { return };
-    let Some(w) = state.grid.windows.get(&id) else { return };
+    let Some(id) = state.grid.focused_window else {
+        return;
+    };
+    let Some(w) = state.grid.windows.get(&id) else {
+        return;
+    };
     let state_str = crate::ipc::commands::state_name(w.current_state).to_owned();
-    let slot_str = w.current_slot
+    let slot_str = w
+        .current_slot
         .map(crate::ipc::commands::slot_name)
         .unwrap_or("")
         .to_owned();
-    state.pending_events.push(Event::WindowStateChanged { id, state: state_str });
+    state.pending_events.push(Event::WindowStateChanged {
+        id,
+        state: state_str,
+    });
     if !slot_str.is_empty() {
-        state.pending_events.push(Event::WindowSlotChanged { id, slot: slot_str });
+        state
+            .pending_events
+            .push(Event::WindowSlotChanged { id, slot: slot_str });
     }
 }
 
 fn emit_stack_changed(state: &mut GlobalState) {
-    let Some(id) = state.grid.focused_window else { return };
-    let Some(w) = state.grid.windows.get(&id) else { return };
-    let Some(slot) = w.current_slot else { return };
+    let Some(id) = state.grid.focused_window else {
+        return;
+    };
+    let Some(w) = state.grid.windows.get(&id) else {
+        return;
+    };
+    let Some(slot) = w.current_slot else {
+        return;
+    };
     let ws = state.grid.focused;
     let stack_size = state.grid.slot_stack_size(ws, slot);
     let slot_name = crate::ipc::commands::slot_name(slot).to_owned();
@@ -1182,20 +1394,37 @@ fn emit_stack_changed(state: &mut GlobalState) {
 }
 
 fn emit_stack_reordered(state: &mut GlobalState) {
-    let Some(id) = state.grid.focused_window else { return };
-    let Some(w) = state.grid.windows.get(&id) else { return };
-    let Some(slot) = w.current_slot else { return };
+    let Some(id) = state.grid.focused_window else {
+        return;
+    };
+    let Some(w) = state.grid.windows.get(&id) else {
+        return;
+    };
+    let Some(slot) = w.current_slot else {
+        return;
+    };
     let ws = w.workspace;
     let ids = state.grid.slot_stack_ids(ws, slot);
-    if ids.len() < 2 { return; } // single-element stack can't be reordered
-    let order_csv = ids.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
+    if ids.len() < 2 {
+        return;
+    } // single-element stack can't be reordered
+    let order_csv = ids
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
     let slot_name = crate::ipc::commands::slot_name(slot).to_owned();
-    state.pending_events.push(Event::WindowStackReordered { slot: slot_name, order_csv });
+    state.pending_events.push(Event::WindowStackReordered {
+        slot: slot_name,
+        order_csv,
+    });
 }
 
 fn emit_workspace_changed(state: &mut GlobalState) {
     let (col, row) = state.grid.focused;
-    state.pending_events.push(Event::WorkspaceChanged { col, row });
+    state
+        .pending_events
+        .push(Event::WorkspaceChanged { col, row });
     // Show OSD workspace indicator (§8.9).
     state.show_osd("workspace");
     // Notify ext-workspace-v1 and wlr-foreign-toplevel-management clients.
@@ -1236,7 +1465,9 @@ fn with_move_anim(state: &mut GlobalState, f: impl FnOnce(&mut GlobalState)) {
 
     // Snapshot rects of all windows on the focused workspace before the action.
     let before: Vec<(crate::grid::window::WindowId, crate::grid::window::Rect)> = {
-        state.grid.visible_windows()
+        state
+            .grid
+            .visible_windows()
             .into_iter()
             .map(|(w, r)| (w.id, r))
             .collect()
@@ -1288,7 +1519,9 @@ fn apply_delta(pos: u8, delta: i8, size: u8, wrap: bool) -> Option<u8> {
 /// grabbed window there if one is active (§7.2 grab-window).
 fn overview_move_focus(state: &mut GlobalState, col: u8, row: u8) {
     let target = (col, row);
-    if target == state.overview_focused { return; }
+    if target == state.overview_focused {
+        return;
+    }
 
     if let Some(win_id) = state.overview_grabbed_window {
         // Move the grabbed window to the new workspace as we navigate.
@@ -1304,7 +1537,9 @@ fn overview_move_focus(state: &mut GlobalState, col: u8, row: u8) {
 /// If the workspace actually changed, start (or replace) a slide animation.
 fn trigger_slide(state: &mut GlobalState, old: (u8, u8)) {
     let new = state.grid.focused;
-    if old == new { return; }
+    if old == new {
+        return;
+    }
     let dir = animate::slide_direction(old, new);
     let duration_ms = state.anim_duration(state.config.view.slide_duration_ms as u64);
     state.slide_anim = Some(WorkspaceSlide::new(old, dir, duration_ms));
@@ -1323,11 +1558,16 @@ pub fn apply_workspace_template(state: &mut GlobalState, coord: (u8, u8), force:
     }
 
     // Find the template for this coord.
-    let template = state.templates.templates.iter()
+    let template = state
+        .templates
+        .templates
+        .iter()
         .find(|t| t.cell == [coord.0, coord.1])
         .cloned();
 
-    let Some(template) = template else { return };
+    let Some(template) = template else {
+        return;
+    };
 
     // Mark as applied (even if empty, so we don't re-check every visit).
     state.applied_templates.insert(coord);
@@ -1347,7 +1587,11 @@ pub fn apply_workspace_template(state: &mut GlobalState, coord: (u8, u8), force:
         let matched_id = win_cfg.app_id.as_deref().and_then(|pattern| {
             state.grid.windows.iter().find_map(|(id, w)| {
                 let aid = &w.app_id;
-                if glob_matches(pattern, aid) { Some(*id) } else { None }
+                if glob_matches(pattern, aid) {
+                    Some(*id)
+                } else {
+                    None
+                }
             })
         });
 
@@ -1381,14 +1625,14 @@ fn glob_matches(pattern: &str, text: &str) -> bool {
 
 fn glob_match_inner(pat: &[char], txt: &[char]) -> bool {
     match (pat.first(), txt.first()) {
-        (None, None)              => true,
-        (Some(&'*'), _)           => {
+        (None, None) => true,
+        (Some(&'*'), _) => {
             // '*' matches zero characters or one character.
             glob_match_inner(&pat[1..], txt)
                 || (!txt.is_empty() && glob_match_inner(pat, &txt[1..]))
         }
-        (Some(&'?'), Some(_))     => glob_match_inner(&pat[1..], &txt[1..]),
+        (Some(&'?'), Some(_)) => glob_match_inner(&pat[1..], &txt[1..]),
         (Some(p), Some(t)) if p == t => glob_match_inner(&pat[1..], &txt[1..]),
-        _                         => false,
+        _ => false,
     }
 }

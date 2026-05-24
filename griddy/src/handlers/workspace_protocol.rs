@@ -32,10 +32,12 @@ pub struct ExtWorkspaceState {
 
 impl ExtWorkspaceState {
     pub fn new() -> Self {
-        Self { managers: Vec::new(), workspace_handles: HashMap::new() }
+        Self {
+            managers: Vec::new(),
+            workspace_handles: HashMap::new(),
+        }
     }
 }
-
 // ─── Helper methods on GlobalState ───────────────────────────────────────────
 
 impl GlobalState {
@@ -67,7 +69,6 @@ impl GlobalState {
         }
     }
 }
-
 // ─── GlobalDispatch — initial bind ───────────────────────────────────────────
 
 impl GlobalDispatch<ExtWorkspaceManagerV1, ()> for GlobalState {
@@ -98,9 +99,7 @@ impl GlobalDispatch<ExtWorkspaceManagerV1, ()> for GlobalState {
         }
 
         // Group capabilities: we don't support dynamic workspace creation.
-        group.capabilities(
-            ext_workspace_group_handle_v1::GroupCapabilities::empty(),
-        );
+        group.capabilities(ext_workspace_group_handle_v1::GroupCapabilities::empty());
 
         let cols = state.grid.cols;
         let rows = state.grid.rows;
@@ -141,9 +140,7 @@ impl GlobalDispatch<ExtWorkspaceManagerV1, ()> for GlobalState {
                 };
                 ws_handle.state(state_bits);
                 // Capabilities: activate only
-                ws_handle.capabilities(
-                    ext_workspace_handle_v1::WorkspaceCapabilities::Activate,
-                );
+                ws_handle.capabilities(ext_workspace_handle_v1::WorkspaceCapabilities::Activate);
 
                 state
                     .ext_workspace_state
@@ -232,10 +229,12 @@ impl Dispatch<ExtWorkspaceHandleV1, (u8, u8)> for GlobalState {
                 let target = *coords;
                 if target != state.grid.focused {
                     state.grid.switch_workspace(target);
-                    state.pending_events.push(crate::ipc::events::Event::WorkspaceChanged {
-                        col: target.0,
-                        row: target.1,
-                    });
+                    state
+                        .pending_events
+                        .push(crate::ipc::events::Event::WorkspaceChanged {
+                            col: target.0,
+                            row: target.1,
+                        });
                     state.ext_workspace_update_all();
                     state.wlr_update_all_states();
                 }
