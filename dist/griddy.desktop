@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=GriddyWM
+Comment=Grid-based Wayland compositor
+Exec=griddy
+TryExec=griddy
+Type=Application
+DesktopNames=GriddyWM

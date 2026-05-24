@@ -1,0 +1,198 @@
+.\" GriddyWM man page
+.TH GRIDDY 1 "2026-05-23" "GriddyWM 0.1" "GriddyWM Manual"
+
+.SH NAME
+griddy \- Grid-based Wayland compositor
+
+.SH SYNOPSIS
+.B griddy
+[\fB\-\-config\fR \fIpath\fR]
+[\fB\-\-check\fR]
+[\fB\-\-replace\fR]
+[\fB\-\-no\-xwayland\fR]
+[\fB\-\-backend\fR \fIwinit|drm\fR]
+[\fB\-\-gpu\fR \fIdevice\fR]
+[\fB\-d\fR]
+
+.SH DESCRIPTION
+.B griddy
+is a Wayland compositor built around a 2-D NxN grid of workspaces.
+Each workspace has six tiled slot positions (two halves and four quarters)
+plus unlimited floating, fullscreen, and total-fullscreen window states.
+Windows stack within slots and the user navigates spatially in all four
+cardinal directions (and diagonally) across the grid.
+
+.SH OPTIONS
+.TP
+.BR \-c ", " \-\-config " " \fIpath\fR
+Override the config file location.
+Defaults to the first of:
+.IR $GRIDDY_CONFIG ,
+.IR $XDG_CONFIG_HOME/griddy/config.toml ,
+.IR ~/.config/griddy/config.toml ,
+.IR /etc/griddy/config.toml .
+
+.TP
+.B \-\-check
+Parse all config files (config.toml, theme.toml, rules.toml,
+workspace-templates.toml, plugins.toml), print any errors, then exit.
+Exit code 0 = valid, 1 = error.
+Does not start the compositor.
+Useful in CI / dotfiles automation.
+
+.TP
+.B \-\-replace
+Send SIGTERM to the currently running
+.B griddy
+instance (identified by the PID file in
+.IR $XDG_RUNTIME_DIR/griddy.lock ),
+wait up to 3 seconds for it to exit (SIGKILL if it doesn't), then start
+this instance.
+
+.TP
+.B \-\-no\-xwayland
+Disable XWayland for this session regardless of config.
+
+.TP
+.BR \-\-backend " " \fIwinit|drm\fR
+Select the rendering backend.
+.B winit
+(default) runs inside an existing Wayland or X11 session — useful for
+development and testing.
+.B drm
+drives a real TTY via KMS/DRM (production; not yet implemented).
+
+.TP
+.BR \-\-gpu " " \fIdevice\fR
+Pin the render GPU, e.g.
+.IR /dev/dri/card1 .
+No-op in the winit backend.
+
+.TP
+.BR \-d ", " \-\-debug
+Enable debug logging (equivalent to
+.IR RUST_LOG=griddy=debug ).
+
+.SH CONFIGURATION
+The compositor loads config files from the config directory in this order:
+
+.TP
+.B config.toml
+Main configuration: grid dimensions, input, windows, keybinds, submaps,
+overview, animations, OSD, startup commands, and environment variables.
+A commented default is copied to
+.I ~/.config/griddy/config.toml
+on first launch.
+
+.TP
+.B theme.toml
+Visual configuration: colors, gaps, borders, cursor, blur.
+Auto-loaded from the same directory as
+.BR config.toml .
+
+.TP
+.B rules.toml
+Per-application window rules: match by
+.B app_id
+or
+.B title
+glob; set slot, state, workspace, floating geometry, opacity, pin.
+
+.TP
+.B keybinds.toml
+Extra keybind entries appended to the main table.
+
+.TP
+.B workspace-templates.toml
+Workspace templates (§8.10): define per-workspace application layouts
+applied on first visit.
+
+.TP
+.B plugins.toml
+Out-of-tree plugin list (§13): each
+.B [[plugin]]
+entry specifies a path to a shared library implementing the GriddyWM
+plugin ABI.
+
+.SH IPC
+The compositor exposes two UNIX sockets in
+.IR $XDG_RUNTIME_DIR/griddy/griddy_<PID>/ :
+
+.TP
+.B .command.sock
+Request/response.
+Prefix commands with
+.B j/
+to receive JSON output.
+
+.TP
+.B .events.sock
+Push-only event stream (one event per line:
+.IR eventname>>data ).
+
+See
+.BR griddyctl (1)
+for the full command and event catalogue.
+
+.SH SIGNALS
+.TP
+.B SIGTERM
+Graceful shutdown.
+
+.TP
+.B SIGUSR1
+Force config reload (same as
+.BR "griddyctl reload" ).
+
+.SH ENVIRONMENT
+.TP
+.B GRIDDY_CONFIG
+Override config file path.
+
+.TP
+.B GRIDDY_INSTANCE_SIGNATURE
+Set by the compositor to
+.IR griddy_<PID>
+and inherited by all child processes.
+
+.TP
+.B WAYLAND_DISPLAY
+Set by the compositor to the socket name
+.RI ( griddy-N ).
+
+.TP
+.B XDG_SESSION_TYPE
+Set to
+.BR wayland .
+
+.TP
+.B XCURSOR_THEME ", " XCURSOR_SIZE
+Set from
+.IR theme.toml " [cursor]"
+on startup and on reload.
+
+.SH FILES
+.TP
+.I ~/.config/griddy/config.toml
+Per-user main configuration (created from default on first launch).
+
+.TP
+.I /usr/share/griddy/default.toml
+Commented default configuration (source for first-run copy).
+
+.TP
+.I /usr/share/wayland-sessions/griddy.desktop
+Session file for display managers (LightDM, SDDM, GDM, greetd).
+
+.TP
+.I $XDG_RUNTIME_DIR/griddy.lock
+PID file (used by
+.BR \-\-replace ).
+
+.SH SEE ALSO
+.BR griddyctl (1),
+.BR wayland (7)
+
+.SH AUTHORS
+The GriddyWM Contributors.
+Project home: https://github.com/griddywm/griddywm

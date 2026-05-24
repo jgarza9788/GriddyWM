@@ -1,0 +1,186 @@
+# GriddyWM — Default Configuration
+# Copy to ~/.config/griddy/config.toml and customise.
+# Hot-reload: Super+Shift+r  (or griddyctl reload)
+# Docs: https://github.com/griddywm/griddywm
+
+# ── Grid ──────────────────────────────────────────────────────────────────────
+[grid]
+cols = 3          # number of workspace columns
+rows = 3          # number of workspace rows
+wrap_x = true     # wrap workspace navigation at horizontal edges
+wrap_y = true     # wrap workspace navigation at vertical edges
+workspace_sync = "unsynced"   # "synced" | "unsynced" — whether workspace nav on one monitor moves all monitors
+
+# ── View ──────────────────────────────────────────────────────────────────────
+[view]
+slide_duration_ms = 200   # workspace slide animation duration
+# default_mode = "focus"  # "focus" | "overview" — start in overview if set to "overview"
+# slide_easing = "ease-out-cubic"  # easing curve name
+
+# ── Input ─────────────────────────────────────────────────────────────────────
+[input]
+follow_mouse = "loose"            # "off" | "loose" | "strict"
+cross_workspace_focus = true      # spatial focus crosses workspace boundaries
+warp_cursor_on_focus_change = false
+warp_cursor_on_workspace_change = false
+tap_to_click = true
+natural_scroll = false
+
+[input.keyboard]
+repeat_rate = 25
+repeat_delay = 600
+# layout = "us"      # XKB layout
+# variant = ""       # XKB variant
+# options = ""       # XKB options (e.g. "ctrl:nocaps")
+
+[input.touchpad]
+# disable_while_typing = true
+# scroll_method = "two-finger"
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+[windows]
+unsnap_threshold_px = 40
+on_slot_conflict = "stack"        # "stack" | "swap" | "kick-to-floating"
+# edge_snap = true
+# edge_snap_threshold_px = 24
+# slot_adaptation = true         # auto-adapt slot on conflict (e.g. Half→Quarter)
+
+[windows.new_window]
+focus_steal_prevention = true     # new windows without activation token get urgent instead of focus
+# focus_on_open = true
+# same_app = "next-empty-slot"   # "next-empty-slot" | "stack-with-focused"
+
+[windows.floating]
+# center_on_open = true
+# default_size = [800, 600]      # [width, height] in pixels
+
+# ── Fullscreen ────────────────────────────────────────────────────────────────
+[fullscreen]
+# total_release_key = "Escape"   # key that exits TotalFullscreen grab
+# allow_tearing = true           # opt TotalFullscreen windows into tearing
+# tearing_hides_floating = true  # hide floating windows during tearing TF
+# performance_on_total_fullscreen = false  # powerprofilesctl set performance while TF active
+
+# ── Overview ──────────────────────────────────────────────────────────────────
+[overview]
+hot_corner = "top-left"           # "top-left"|"top-right"|"bottom-left"|"bottom-right"|"none"
+hot_corner_delay_ms = 150
+show_titles = false
+show_labels = true
+gap_px = 16
+margin_px = 32
+
+# ── Animations ────────────────────────────────────────────────────────────────
+[animations]
+open_duration_ms = 160
+close_duration_ms = 120
+on_interrupt = "snap-then-start"
+crossfade_ms = 60
+# respect_prefers_reduced_motion = true   # collapse all durations to 0 when ACCESSIBILITY_PREFER_REDUCED_MOTION=1
+
+# ── Idle management (§8.8) ────────────────────────────────────────────────────
+[idle]
+enabled = true
+# [[idle.timeout]]
+# after_seconds = 300
+# on_timeout = "swaylock"
+# on_resume = ""
+#
+# [[idle.timeout]]
+# after_seconds = 600
+# on_timeout = "dpms off"
+# on_resume = "dpms on"
+
+# ── Shaders (§11) ────────────────────────────────────────────────────────────
+# [shaders]
+# screen = ""              # global post-process GLSL shader; empty = none
+# open   = ""              # per-animation GLSL overrides
+# close  = ""
+# move   = ""
+
+# ── XWayland ─────────────────────────────────────────────────────────────────
+[xwayland]
+enable = true
+# hidpi = true             # apply output scale to XWayland apps
+# scale = 1.0              # explicit scale override
+
+# ── Session persistence (§22.1) ───────────────────────────────────────────────
+[session]
+autosave_interval_s = 60    # save session every N seconds (0 = disable)
+restore_on_start = true      # restore window→workspace assignments on next launch
+
+# ── Startup ───────────────────────────────────────────────────────────────────
+[startup]
+honor_xdg_autostart = true
+# exec_once — runs once at compositor start (not on config reload)
+# exec_once = [
+#   "waybar",
+#   "swaybg -i ~/wallpaper.jpg",
+#   "dunst",
+# ]
+# exec — runs at startup AND on every config reload (like Hyprland exec)
+# exec = [
+#   "swaybg -c '#1a1b26'",
+# ]
+
+# ── Environment ───────────────────────────────────────────────────────────────
+[env]
+# Extra environment variables exported to child processes.
+# GTK_THEME = "Adwaita:dark"
+# QT_QPA_PLATFORM = "wayland"
+
+# ── Keybinds ─────────────────────────────────────────────────────────────────
+# Modifier aliases:  $mod = Super  $alt = Alt  $ctrl = Control  $shift = Shift
+#
+# Built-in defaults (always active unless overridden):
+#   Super+Return           → spawn kitty
+#   Super+d                → spawn fuzzel
+#   Super+q                → close-window
+#   Super+Shift+e          → quit (global)
+#   Super+Shift+r          → reload-config
+#   Super+f / F / v        → fullscreen / total-fullscreen / floating toggle
+#   Super+hjkl             → focus left/right/up/down
+#   Super+Ctrl+hjkl        → workspace navigation
+#   Super+Shift+Ctrl+hjkl  → move window to workspace
+#   Super+o                → overview-toggle
+#   Super+m                → minimap-toggle
+#   Super+w                → placement submap
+#   Super+r                → resize submap
+#   Super+1–9              → workspace by index
+#   Super+Shift+1–9        → move window to workspace by index
+
+# Add custom keybinds below:
+# [[bind]]
+# key = "t"
+# mods = ["$mod"]
+# action = "exec alacritty"
+
+# [[bind]]
+# key = "b"
+# mods = ["$mod"]
+# action = "exec firefox"
+
+# ── Window rules ─────────────────────────────────────────────────────────────
+# Defined in rules.toml (same directory), or inline:
+# [[rule]]
+# match.app_id = "mpv"
+# action.state = "fullscreen"
+#
+# [[rule]]
+# match.title = "Picture-in-Picture"
+# action.floating_geom = { x = 20, y = 20, w = 480, h = 270 }
+# action.pin = true
+
+# ── Submaps ───────────────────────────────────────────────────────────────────
+# Built-in submaps:
+#   $mod+w  → placement submap  (h/l = halves, u/i/j/k = quarters, f/F/v = states)
+#   $mod+r  → resize submap     (h/j/k/l = resize floating, Escape/Return = exit)
+#
+# Define custom submaps:
+# [[submap]]
+# name = "app-launcher"
+# exit_keys = ["Escape"]
+# exit_on_unhandled = true
+# [[submap.bind]]
+# key = "b"
+# action = "exec firefox"

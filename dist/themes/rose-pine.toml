@@ -1,0 +1,25 @@
+# GriddyWM — Rosé Pine (Main) theme preset
+# https://rosepinetheme.com/palette
+
+[colors]
+accent      = "#ebbcba"   # Rose
+accent_dim  = "#c4a7e7"   # Iris (dim)
+fg          = "#e0def4"   # Text
+fg_dim      = "#908caa"   # Subtle
+bg          = "#191724"   # Base
+bg_alt      = "#26233a"   # Surface
+border_idle = "#403d52"   # Overlay
+warn        = "#f6c177"   # Gold
+danger      = "#eb6f92"   # Love
+ok          = "#9ccfd8"   # Foam
+shadow      = "#000000aa"
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.08

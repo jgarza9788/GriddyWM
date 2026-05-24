@@ -1,0 +1,25 @@
+# GriddyWM — Gruvbox Light theme preset
+# https://github.com/morhetz/gruvbox
+
+[colors]
+accent      = "#427b58"   # Aqua (normal)
+accent_dim  = "#76a065"   # Aqua (dim)
+fg          = "#3c3836"   # fg1
+fg_dim      = "#504945"   # fg2
+bg          = "#fbf1c7"   # bg0
+bg_alt      = "#ebdbb2"   # bg1
+border_idle = "#d5c4a1"   # bg2
+warn        = "#b57614"   # Yellow (normal)
+danger      = "#cc241d"   # Red (normal)
+ok          = "#79740e"   # Green (normal)
+shadow      = "#3c383644" # fg1 + alpha
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.05

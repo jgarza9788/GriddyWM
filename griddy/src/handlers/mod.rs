@@ -1,0 +1,14 @@
+pub mod compositor;
+pub mod data_device;
+pub mod fifo;
+pub mod foreign_toplevel;
+pub mod layer_shell;
+pub mod output_management;
+pub mod protocols;
+pub mod screencopy;
+pub mod seat;
+pub mod session_lock;
+pub mod tearing_control;
+pub mod workspace_protocol;
+pub mod xdg_shell;
+pub mod xwayland;

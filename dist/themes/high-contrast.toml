@@ -1,0 +1,25 @@
+# GriddyWM — High Contrast accessibility theme preset
+# Larger borders, saturated accent, maximum contrast bg/fg
+
+[colors]
+accent      = "#ffffff"   # Pure white — focused border
+accent_dim  = "#ffff00"   # Yellow — dimmed accent
+fg          = "#ffffff"   # White foreground
+fg_dim      = "#cccccc"   # Light grey
+bg          = "#000000"   # Black background
+bg_alt      = "#111111"   # Near-black
+border_idle = "#888888"   # Mid grey inactive border
+warn        = "#ffcc00"   # Amber
+danger      = "#ff2222"   # Bright red
+ok          = "#00ff66"   # Bright green
+shadow      = "#000000cc"
+
+[window]
+[window.focused]
+border_px  = 4
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 3
+opacity      = 1.0
+inactive_dim = 0.0

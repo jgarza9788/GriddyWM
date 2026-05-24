@@ -1,0 +1,25 @@
+# GriddyWM — Everforest Dark (medium) theme preset
+# https://github.com/sainnhe/everforest
+
+[colors]
+accent      = "#7fbbb3"   # Aqua
+accent_dim  = "#83c092"   # Green (dim)
+fg          = "#d3c6aa"   # fg
+fg_dim      = "#9da9a0"   # grey1
+bg          = "#2d353b"   # bg0
+bg_alt      = "#3d484d"   # bg1
+border_idle = "#475258"   # bg2
+warn        = "#dbbc7f"   # Yellow
+danger      = "#e67e80"   # Red
+ok          = "#a7c080"   # Green
+shadow      = "#1e2326aa" # bg_dim + alpha
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.07

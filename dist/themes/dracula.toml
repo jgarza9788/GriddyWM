@@ -1,0 +1,25 @@
+# GriddyWM — Dracula theme preset
+# https://draculatheme.com/contribute
+
+[colors]
+accent      = "#bd93f9"   # Purple
+accent_dim  = "#6272a4"   # Comment
+fg          = "#f8f8f2"   # Foreground
+fg_dim      = "#8be9fd"   # Cyan (as secondary fg)
+bg          = "#282a36"   # Background
+bg_alt      = "#44475a"   # Current Line / Selection
+border_idle = "#44475a"   # Selection
+warn        = "#f1fa8c"   # Yellow
+danger      = "#ff5555"   # Red
+ok          = "#50fa7b"   # Green
+shadow      = "#000000aa"
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.08

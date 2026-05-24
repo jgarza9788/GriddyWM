@@ -1,0 +1,53 @@
+# GriddyWM monitors.toml — per-output configuration (§8.6)
+#
+# Place this file in the same directory as config.toml.
+# GriddyWM reads it on startup and on each config reload (SIGUSR1 / griddyctl reload).
+# Connector names are reported by `griddyctl get monitors`.
+#
+# Keys not listed for a monitor fall back to the [default] section.
+
+# ─── Default settings ───────────────────────────────────────────────────────
+# Applied to any connected output not explicitly named below.
+[default]
+mode     = "preferred"   # "preferred" | "WxH" | "WxH@Hz"
+scale    = 1.0
+position = "auto"        # "auto" arranges outputs in a row, left to right
+
+# ─── Primary display ────────────────────────────────────────────────────────
+[[monitor]]
+name      = "DP-1"
+mode      = "2560x1440@165"
+position  = [0, 0]
+scale     = 1.0
+transform = "normal"     # normal | 90 | 180 | 270 | flipped | flipped-90 | ...
+vrr       = "fullscreen" # off | on | fullscreen (enable only in full-screen windows)
+tearing   = false        # allow tearing when window opts in via wp_tearing_control_v1
+enabled   = true
+
+# Grid overrides — leave out to inherit from [grid] in config.toml
+# grid_cols = 3
+# grid_rows = 3
+
+# Workspace navigation sync: when true (default), navigating this monitor
+# also moves sibling monitors to the same grid coordinates.
+workspace_sync = true
+
+# ─── Secondary display ──────────────────────────────────────────────────────
+[[monitor]]
+name      = "HDMI-A-1"
+mode      = "1920x1080@60"
+position  = [2560, 0]   # placed to the right of DP-1
+scale     = 1.0
+enabled   = true
+
+# This monitor keeps its own workspace position — it doesn't follow navigation.
+workspace_sync = false
+
+# ─── Laptop built-in ────────────────────────────────────────────────────────
+# [[monitor]]
+# name      = "eDP-1"
+# mode      = "preferred"
+# scale     = 2.0        # HiDPI
+# position  = [0, 1440]  # below DP-1
+# bit_depth = 10         # requires HDR-capable driver path
+# hdr       = false

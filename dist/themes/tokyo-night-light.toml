@@ -1,0 +1,24 @@
+# GriddyWM — Tokyo Night Light theme preset
+
+[colors]
+accent      = "#343b59"   # Blue (dark)
+accent_dim  = "#7590ca"   # Blue (mid)
+fg          = "#343b58"   # Foreground
+fg_dim      = "#565a6e"   # Comment
+bg          = "#d5d6db"   # Background
+bg_alt      = "#cbccd1"   # Background alt
+border_idle = "#9699a3"   # Selection
+warn        = "#8f5e15"   # Yellow
+danger      = "#8c4351"   # Red
+ok          = "#33635c"   # Green
+shadow      = "#00000044"
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.05

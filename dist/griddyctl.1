@@ -1,0 +1,316 @@
+.TH GRIDDYCTL 1 "2026-05-23" "GriddyWM 0.1" "User Commands"
+.SH NAME
+griddyctl \- Control interface for the GriddyWM Wayland compositor
+.SH SYNOPSIS
+.B griddyctl
+[\fB\-j\fR]
+[\fB\-\-batch\fR \fIcmds\fR]
+\fIcommand\fR
+[\fIarguments\fR...]
+.SH DESCRIPTION
+.B griddyctl
+communicates with a running
+.BR griddy (1)
+compositor via its UNIX command socket.
+It can query compositor state, dispatch window management actions, reload
+configuration, and subscribe to live event streams.
+.PP
+The socket path is determined from the
+.B GRIDDY_INSTANCE_SIGNATURE
+environment variable (e.g.\&
+.IR griddy_1234 ),
+which
+.B griddy
+exports automatically.
+.SH OPTIONS
+.TP
+.B \-j
+Output JSON instead of the default plain-text format.
+.TP
+.BI \-\-batch " cmds"
+Send multiple commands in a single round trip.
+Commands are separated by
+.BR " ; "
+(space-semicolon-space).
+.SH COMMANDS
+.SS dispatch
+.TP
+.BI dispatch " action " [ args... ]
+Execute a window management action.
+.PP
+.B Workspace navigation:
+.RS
+.TP
+.B workspace-left, workspace-right, workspace-up, workspace-down
+Move focus to the adjacent workspace in the given direction.
+.TP
+.BI workspace " col,row"
+Jump to the workspace at grid coordinates
+.IR col , row
+(zero-based).
+.TP
+.B workspace-prev, workspace-next
+Move to the previous/next workspace in history.
+.RE
+.PP
+.B Window focus:
+.RS
+.TP
+.B focus-left, focus-right, focus-up, focus-down
+Move keyboard focus to the adjacent slot.
+.TP
+.B focus-cycle, focus-cycle-back
+Cycle focus through windows on the current workspace.
+.RE
+.PP
+.B Window placement:
+.RS
+.TP
+.B slot-half-left, slot-half-right
+Tile the focused window in the left/right half.
+.TP
+.B slot-quarter-tl, slot-quarter-tr, slot-quarter-bl, slot-quarter-br
+Tile in a quarter-screen slot (top-left, top-right, bottom-left, bottom-right).
+.TP
+.B state-fullscreen-toggle
+Toggle fullscreen state.
+.TP
+.B state-total-fullscreen-toggle
+Toggle total-fullscreen (covers layer-shell panels).
+.TP
+.B state-floating-toggle
+Toggle floating state.
+.TP
+.B state-minimise-toggle
+Toggle minimized state.
+.RE
+.PP
+.B Window movement:
+.RS
+.TP
+.BI move-window-to " col,row"
+Move the focused window to workspace at
+.IR col , row .
+.RE
+.PP
+.B Window control:
+.RS
+.TP
+.B kill-window
+Close the focused window (graceful send_close).
+.TP
+.B pin-toggle
+Toggle whether the window appears on all workspaces.
+.TP
+.B urgent-toggle
+Toggle the urgent flag on the focused window.
+.RE
+.PP
+.B Overview and minimap:
+.RS
+.TP
+.B overview-toggle
+Enter or exit overview mode.
+.TP
+.B minimap-toggle
+Toggle the minimap HUD.
+.RE
+.PP
+.B Submaps:
+.RS
+.TP
+.BI submap " name"
+Enter a named key-submap (modal mode).
+.TP
+.B submap-reset
+Exit the active submap.
+.RE
+.PP
+.B Compositor control:
+.RS
+.TP
+.BI exec " command"
+Run a shell command.
+.TP
+.B lock
+Activate the screen lock.
+.TP
+.B quit
+Exit the compositor.
+.RE
+.SS get
+.TP
+.B get workspaces
+List all workspaces and their properties.
+.TP
+.B get windows
+List all managed windows.
+.TP
+.B get activewindow
+Show the currently focused window.
+.TP
+.B get activeworkspace
+Show the currently focused workspace.
+.TP
+.B get grid
+Show the full grid state.
+.TP
+.B get monitors
+List connected outputs and their properties.
+.TP
+.B get version
+Show compositor version information.
+.TP
+.B get layers
+List active layer-shell surfaces (bars, overlays, backgrounds).
+.TP
+.B get shaders
+Show the active screen post-process shader.
+.TP
+.B get cursorpos
+Show the current cursor position as
+.IR x,y .
+.SS monitors
+.TP
+.B monitors
+List connected outputs (shorthand for
+.BR "get monitors" ).
+.SS reload
+.TP
+.B reload
+Reload
+.I config.toml
+and
+.IR theme.toml .
+Equivalent to sending
+.BR SIGUSR1 .
+.SS plugin
+.TP
+.B plugin list
+List all currently loaded plugins.
+.TP
+.BI plugin " load " path
+Load the plugin at \fIpath\fR (a compiled \fB.so\fR). Emits
+.B plugin_loaded
+or
+.B plugin_error
+IPC event.
+.TP
+.BI plugin " unload " name
+Unload the plugin with the given name.
+.SS shader
+.TP
+.BI shader " set " "\-\-window " id " " path
+Assign a per-window GLSL fragment shader.
+.TP
+.BI shader " screen " path
+Set the global screen post-process shader.
+.TP
+.B shader clear
+Remove the active screen shader.
+.SS setprop
+.TP
+.BI setprop " id prop value"
+Set a per-window property at runtime.
+.PP
+.B Supported properties:
+.IR is_urgent ", " sticky ", " pin ", " no_animations ", " steal_focus ", "
+.IR above_total_fullscreen ", " opacity " (0.0\(en1.0), "
+.IR border_color " (hex string), " shader " (path or empty to clear)."
+.SS kill
+.TP
+.B kill
+Ask the compositor to exit cleanly.
+.SS subscribe
+.TP
+.B subscribe [\fIevent\fR...]
+Subscribe to the event socket and print events as they arrive.
+Optionally filter to specific event names.
+Events are emitted one per line in the format
+.IR "name>>data" .
+.PP
+.B Available events:
+workspace_changed, window_opened, window_closed, window_focus,
+submap_changed, config_reloaded, config_error, overview_opened,
+overview_closed, view_mode_changed, plugin_loaded, plugin_error.
+.SH JSON OUTPUT
+When
+.B \-j
+is given (or an endpoint is prefixed with
+.BR j/ ),
+all responses are JSON.
+Structured responses use arrays of objects with camelCase keys.
+.SH BATCH MODE
+.PP
+.RS
+.EX
+griddyctl \-\-batch "dispatch slot-half-left ; dispatch focus-right"
+.EE
+.RE
+.PP
+Commands are executed in order; responses are separated by
+.BR "\\x04"
+(EOT) on the socket and by newlines when printed.
+.SH ENVIRONMENT
+.TP
+.B GRIDDY_INSTANCE_SIGNATURE
+Set by
+.BR griddy (1)
+to
+.BI griddy_ PID\fR.
+.B griddyctl
+uses this to locate the runtime socket directory.
+.TP
+.B XDG_RUNTIME_DIR
+Socket files are placed in
+.IB $XDG_RUNTIME_DIR / griddy_PID /
+.SH FILES
+.TP
+.I $XDG_RUNTIME_DIR/griddy_PID/griddy.sock
+Command socket (request/response).
+.TP
+.I $XDG_RUNTIME_DIR/griddy_PID/griddy-events.sock
+Event socket (subscribe-only; events are one-way from compositor to client).
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+The compositor is not running or the socket is not reachable.
+.TP
+.B 2
+Invalid command or arguments.
+.SH EXAMPLES
+.PP
+Switch to workspace at column 1, row 0:
+.RS
+.EX
+griddyctl dispatch workspace 1,0
+.EE
+.RE
+.PP
+List all windows as JSON:
+.RS
+.EX
+griddyctl \-j get windows
+.EE
+.RE
+.PP
+Tile focused window in the top-left quarter, then move focus right:
+.RS
+.EX
+griddyctl \-\-batch "dispatch slot-quarter-tl ; dispatch focus-right"
+.EE
+.RE
+.PP
+Watch for workspace and focus changes:
+.RS
+.EX
+griddyctl subscribe workspace_changed window_focus
+.EE
+.RE
+.SH SEE ALSO
+.BR griddy (1)
+.SH AUTHORS
+GriddyWM contributors.

@@ -1,0 +1,25 @@
+# GriddyWM — Catppuccin Latte theme preset (light)
+# https://catppuccin.com/palette
+
+[colors]
+accent      = "#8839ef"   # Mauve
+accent_dim  = "#7287fd"   # Lavender
+fg          = "#4c4f69"   # Text
+fg_dim      = "#6c6f85"   # Subtext 0
+bg          = "#eff1f5"   # Base
+bg_alt      = "#ccd0da"   # Surface 0
+border_idle = "#bcc0cc"   # Surface 1
+warn        = "#df8e1d"   # Yellow
+danger      = "#d20f39"   # Red
+ok          = "#40a02b"   # Green
+shadow      = "#4c4f6944" # Text + alpha
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.05

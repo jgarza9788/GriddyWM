@@ -1,0 +1,25 @@
+# GriddyWM — Catppuccin Mocha theme preset
+# https://catppuccin.com/palette
+
+[colors]
+accent      = "#cba6f7"   # Mauve
+accent_dim  = "#b4befe"   # Lavender (dim)
+fg          = "#cdd6f4"   # Text
+fg_dim      = "#a6adc8"   # Subtext 0
+bg          = "#1e1e2e"   # Base
+bg_alt      = "#313244"   # Surface 0
+border_idle = "#45475a"   # Surface 1
+warn        = "#f9e2af"   # Yellow
+danger      = "#f38ba8"   # Red
+ok          = "#a6e3a1"   # Green
+shadow      = "#11111baa" # Crust + alpha
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.08

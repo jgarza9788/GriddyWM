@@ -1,0 +1,84 @@
+// GriddyWM — sample Waybar configuration snippet
+// Place this in ~/.config/waybar/config.jsonc
+//
+// Requires:
+//   waybar (wlr-foreign-toplevel-management + ext-workspace-v1 support)
+//   griddyctl (for the workspace pills script)
+//
+// The workspace pills module polls `griddyctl -j get workspaces` every second
+// and shows a button per cell — the focused workspace is highlighted.
+{
+    "layer": "top",
+    "position": "top",
+    "height": 32,
+    "spacing": 4,
+
+    "modules-left": [
+        "custom/griddy-workspaces",
+        "wlr/taskbar"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "pulseaudio",
+        "cpu",
+        "memory",
+        "network",
+        "battery",
+        "tray"
+    ],
+
+    // ── GriddyWM workspace pills ──────────────────────────────────────────────
+    // Uses `griddyctl -j get workspaces` to build a grid pill for each cell.
+    // The active workspace button has class "active".
+    "custom/griddy-workspaces": {
+        "exec": "griddyctl -j get workspaces | jq -r '[.[] | {text: (.col|tostring) + \",\" + (.row|tostring), class: (if .focused then \"active\" else \"\" end)}] | @json'",
+        "return-type": "json",
+        "interval": 1,
+        "format": "{}",
+        "on-click": "griddyctl dispatch workspace {}"
+    },
+
+    // ── Standard modules ──────────────────────────────────────────────────────
+    "clock": {
+        "format": "{:%H:%M}",
+        "format-alt": "{:%Y-%m-%d %H:%M:%S}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+    "pulseaudio": {
+        "format": "{volume}%  {icon}",
+        "format-muted": "MUTE",
+        "format-icons": { "default": ["", "", ""] },
+        "on-click": "pavucontrol"
+    },
+    "cpu": {
+        "format": "CPU {usage}%",
+        "interval": 2
+    },
+    "memory": {
+        "format": "MEM {}%",
+        "interval": 5
+    },
+    "network": {
+        "format-wifi": "{essid} {signalStrength}%",
+        "format-ethernet": "{ipaddr}",
+        "format-disconnected": "OFFLINE"
+    },
+    "battery": {
+        "format": "{capacity}% {icon}",
+        "format-icons": ["", "", "", "", ""],
+        "states": { "warning": 30, "critical": 15 }
+    },
+    "tray": {
+        "spacing": 8
+    },
+
+    // ── wlr/taskbar for open windows ──────────────────────────────────────────
+    "wlr/taskbar": {
+        "format": "{icon}",
+        "icon-size": 18,
+        "on-click": "activate",
+        "on-click-right": "close"
+    }
+}

@@ -1,0 +1,25 @@
+# GriddyWM — Solarized Dark theme preset
+# https://ethanschoonover.com/solarized/
+
+[colors]
+accent      = "#268bd2"   # Blue
+accent_dim  = "#2aa198"   # Cyan
+fg          = "#839496"   # base0
+fg_dim      = "#657b83"   # base00
+bg          = "#002b36"   # base03
+bg_alt      = "#073642"   # base02
+border_idle = "#586e75"   # base01
+warn        = "#b58900"   # Yellow
+danger      = "#dc322f"   # Red
+ok          = "#859900"   # Green
+shadow      = "#00212baa" # deeper base03
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.08

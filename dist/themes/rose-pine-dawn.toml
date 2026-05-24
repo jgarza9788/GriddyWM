@@ -1,0 +1,25 @@
+# GriddyWM — Rosé Pine Dawn (light) theme preset
+# https://rosepinetheme.com/palette
+
+[colors]
+accent      = "#b4637a"   # Love
+accent_dim  = "#907aa9"   # Iris (dim)
+fg          = "#575279"   # Text
+fg_dim      = "#797593"   # Subtle
+bg          = "#faf4ed"   # Base
+bg_alt      = "#fffaf3"   # Surface
+border_idle = "#dfdad9"   # Overlay
+warn        = "#ea9d34"   # Gold
+danger      = "#b4637a"   # Love
+ok          = "#286983"   # Pine
+shadow      = "#57527944" # Text + alpha
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.05

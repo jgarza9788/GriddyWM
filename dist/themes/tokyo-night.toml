@@ -1,0 +1,25 @@
+# GriddyWM — Tokyo Night theme preset
+# https://github.com/enkia/tokyo-night-vscode-theme
+
+[colors]
+accent      = "#7aa2f7"   # Blue
+accent_dim  = "#3d59a1"   # Blue (dim)
+fg          = "#c0caf5"   # Foreground
+fg_dim      = "#a9b1d6"   # Comment
+bg          = "#1a1b26"   # Background
+bg_alt      = "#24283b"   # Background (highlight)
+border_idle = "#414868"   # Selection
+warn        = "#e0af68"   # Yellow
+danger      = "#f7768e"   # Red
+ok          = "#9ece6a"   # Green
+shadow      = "#000000aa"
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.08

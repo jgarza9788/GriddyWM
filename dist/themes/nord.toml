@@ -1,0 +1,25 @@
+# GriddyWM — Nord theme preset
+# https://www.nordtheme.com/docs/colors-and-palettes
+
+[colors]
+accent      = "#88c0d0"   # Frost — polar water
+accent_dim  = "#5e81ac"   # Frost — polar night
+fg          = "#eceff4"   # Snow Storm 3
+fg_dim      = "#d8dee9"   # Snow Storm 1
+bg          = "#2e3440"   # Polar Night 1
+bg_alt      = "#3b4252"   # Polar Night 2
+border_idle = "#434c5e"   # Polar Night 3
+warn        = "#ebcb8b"   # Aurora — yellow
+danger      = "#bf616a"   # Aurora — red
+ok          = "#a3be8c"   # Aurora — green
+shadow      = "#2e3440aa"
+
+[window]
+[window.focused]
+border_px  = 2
+opacity    = 1.0
+
+[window.unfocused]
+border_px    = 2
+opacity      = 0.97
+inactive_dim = 0.07
