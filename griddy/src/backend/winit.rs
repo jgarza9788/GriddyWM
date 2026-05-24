@@ -622,37 +622,152 @@ pub fn run(
                                 state.grid.outer_gap_px,
                                 smart,
                             );
-                            let shift_px = state.config.theme.window.stacked.peek_cascade_offset_px;
                             let usable_x = state.grid.usable_x;
                             let usable_y = state.grid.usable_y;
-                            for (idx, win_id) in stack_ids.iter().enumerate() {
-                                if let Some(win) = state.grid.windows.get(win_id) {
-                                    let s = idx as i32 * shift_px;
-                                    let rect = crate::grid::window::Rect::new(
-                                        base.x + usable_x + s,
-                                        base.y + usable_y + s,
-                                        base.w,
-                                        base.h,
-                                    );
-                                    let alpha = if idx == 0 {
-                                        1.0f32
-                                    } else {
-                                        state.config.theme.window.stacked.peek_dim_unstacked
-                                    };
-                                    let wl = win.surface.wl_surface().clone();
-                                    let elements = render_elements_from_surface_tree(
-                                        renderer,
-                                        &wl,
-                                        (rect.x, rect.y),
-                                        1.0,
-                                        alpha,
-                                        Kind::Unspecified,
-                                    );
-                                    result.push(CascadeLayerData {
-                                        elements,
-                                        rect,
-                                        is_top: idx == 0,
-                                    });
+                            let max_layers = state.config.theme.window.stacked.depth_max_layers;
+                            let dim = state.config.theme.window.stacked.peek_dim_unstacked;
+                            let peek_style =
+                                state.config.theme.window.stacked.peek_style.clone();
+                            let n = stack_ids.len().min(max_layers + 1);
+
+                            match peek_style.as_str() {
+                                "fan" => {
+                                    let gap = 4i32;
+                                    let cell_w = ((base.w - gap * (n as i32 - 1))
+                                        / n as i32)
+                                        .max(1);
+                                    let scale = cell_w as f64 / base.w as f64;
+                                    for (idx, win_id) in
+                                        stack_ids.iter().take(n).enumerate()
+                                    {
+                                        if let Some(win) =
+                                            state.grid.windows.get(win_id)
+                                        {
+                                            let rx = base.x
+                                                + usable_x
+                                                + idx as i32 * (cell_w + gap);
+                                            let rect = crate::grid::window::Rect::new(
+                                                rx,
+                                                base.y + usable_y,
+                                                cell_w,
+                                                base.h,
+                                            );
+                                            let alpha =
+                                                if idx == 0 { 1.0f32 } else { dim };
+                                            let wl =
+                                                win.surface.wl_surface().clone();
+                                            let elements =
+                                                render_elements_from_surface_tree(
+                                                    renderer,
+                                                    &wl,
+                                                    (rect.x, rect.y),
+                                                    scale,
+                                                    alpha,
+                                                    Kind::Unspecified,
+                                                );
+                                            result.push(CascadeLayerData {
+                                                elements,
+                                                rect,
+                                                is_top: idx == 0,
+                                            });
+                                        }
+                                    }
+                                }
+                                "grid" => {
+                                    let cols =
+                                        ((n as f32).sqrt().ceil() as usize).max(1);
+                                    let rows = (n + cols - 1) / cols;
+                                    let gap = 2i32;
+                                    let cell_w = ((base.w
+                                        - gap * (cols as i32 - 1))
+                                        / cols as i32)
+                                        .max(1);
+                                    let cell_h = ((base.h
+                                        - gap * (rows as i32 - 1))
+                                        / rows as i32)
+                                        .max(1);
+                                    let scale = (cell_w as f64 / base.w as f64)
+                                        .min(cell_h as f64 / base.h as f64);
+                                    for (idx, win_id) in
+                                        stack_ids.iter().take(n).enumerate()
+                                    {
+                                        if let Some(win) =
+                                            state.grid.windows.get(win_id)
+                                        {
+                                            let col = idx % cols;
+                                            let row = idx / cols;
+                                            let rx = base.x
+                                                + usable_x
+                                                + col as i32 * (cell_w + gap);
+                                            let ry = base.y
+                                                + usable_y
+                                                + row as i32 * (cell_h + gap);
+                                            let rect = crate::grid::window::Rect::new(
+                                                rx, ry, cell_w, cell_h,
+                                            );
+                                            let alpha =
+                                                if idx == 0 { 1.0f32 } else { dim };
+                                            let wl =
+                                                win.surface.wl_surface().clone();
+                                            let elements =
+                                                render_elements_from_surface_tree(
+                                                    renderer,
+                                                    &wl,
+                                                    (rect.x, rect.y),
+                                                    scale,
+                                                    alpha,
+                                                    Kind::Unspecified,
+                                                );
+                                            result.push(CascadeLayerData {
+                                                elements,
+                                                rect,
+                                                is_top: idx == 0,
+                                            });
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    // "cascade" (default): offset layers, depth-capped
+                                    let shift_px = state
+                                        .config
+                                        .theme
+                                        .window
+                                        .stacked
+                                        .peek_cascade_offset_px;
+                                    for (idx, win_id) in
+                                        stack_ids.iter().take(n).enumerate()
+                                    {
+                                        if let Some(win) =
+                                            state.grid.windows.get(win_id)
+                                        {
+                                            let s = idx as i32 * shift_px;
+                                            let rect =
+                                                crate::grid::window::Rect::new(
+                                                    base.x + usable_x + s,
+                                                    base.y + usable_y + s,
+                                                    base.w,
+                                                    base.h,
+                                                );
+                                            let alpha =
+                                                if idx == 0 { 1.0f32 } else { dim };
+                                            let wl =
+                                                win.surface.wl_surface().clone();
+                                            let elements =
+                                                render_elements_from_surface_tree(
+                                                    renderer,
+                                                    &wl,
+                                                    (rect.x, rect.y),
+                                                    1.0,
+                                                    alpha,
+                                                    Kind::Unspecified,
+                                                );
+                                            result.push(CascadeLayerData {
+                                                elements,
+                                                rect,
+                                                is_top: idx == 0,
+                                            });
+                                        }
+                                    }
                                 }
                             }
                         }

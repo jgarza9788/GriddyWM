@@ -394,6 +394,7 @@ impl Grid {
 
         self.windows.insert(id, window);
         self.surface_to_window.insert(surface_id, id);
+        self.sync_stack_indices(ws_coords);
 
         // §22.4 window swallowing: hide the swallowed window and take its slot.
         if let Some(swallowed_id) = hints.swallows {
@@ -435,8 +436,8 @@ impl Grid {
 
         // Guard: special workspace windows use (MAX,MAX) and have no grid slot.
         if ws_coords.0 != u8::MAX && ws_coords.1 != u8::MAX {
-            let ws = self.ws_mut(ws_coords.0, ws_coords.1);
-            ws.remove_window(id);
+            self.ws_mut(ws_coords.0, ws_coords.1).remove_window(id);
+            self.sync_stack_indices(ws_coords);
         }
 
         // Focus-on-close policy.
@@ -873,6 +874,7 @@ impl Grid {
                     w.current_slot = Some(slot);
                     w.requested_state = WindowState::Tiled;
                 }
+                self.sync_stack_indices(ws_coords);
             }
             WindowState::TotalFullscreen => {
                 // Step down: TotalFullscreen → Fullscreen
@@ -926,6 +928,7 @@ impl Grid {
                     w.current_slot = Some(slot);
                     w.requested_state = WindowState::Tiled;
                 }
+                self.sync_stack_indices(ws_coords);
             }
             _ => {
                 // Promote → TotalFullscreen
@@ -967,6 +970,7 @@ impl Grid {
                     w.current_slot = Some(slot);
                     w.requested_state = WindowState::Tiled;
                 }
+                self.sync_stack_indices(ws_coords);
             }
             _ => {
                 // Promote: anything → Floating
@@ -1064,6 +1068,7 @@ impl Grid {
             w.requested_slot = Some(slot);
             w.current_slot = final_slot;
         }
+        self.sync_stack_indices(ws_coords);
         self.focused_window = Some(id);
         self.send_configure(id);
     }
@@ -1098,6 +1103,7 @@ impl Grid {
         };
         self.focused_window = Some(new_top);
         self.ws_mut(ws_coords.0, ws_coords.1).record_focus(new_top);
+        self.sync_stack_indices(ws_coords);
     }
 
     /// Rotate the focused slot's stack: make the next window the top (visible).
@@ -1127,6 +1133,7 @@ impl Grid {
         };
         self.focused_window = Some(new_top);
         self.ws_mut(ws_coords.0, ws_coords.1).record_focus(new_top);
+        self.sync_stack_indices(ws_coords);
     }
 
     /// Rotate the focused slot's stack: make the previous window the top.
@@ -1156,6 +1163,7 @@ impl Grid {
         };
         self.focused_window = Some(new_top);
         self.ws_mut(ws_coords.0, ws_coords.1).record_focus(new_top);
+        self.sync_stack_indices(ws_coords);
     }
 
     /// Move the focused window to position 0 of its slot's stack.
@@ -1184,6 +1192,7 @@ impl Grid {
         }
         self.focused_window = Some(id);
         self.ws_mut(ws_coords.0, ws_coords.1).record_focus(id);
+        self.sync_stack_indices(ws_coords);
     }
 
     /// Eject the focused window from its tiled slot into the Floating layer.
@@ -1227,6 +1236,7 @@ impl Grid {
             w.current_state = WindowState::Floating;
             w.current_slot = None;
         }
+        self.sync_stack_indices(ws_coords);
         self.send_configure(id);
         tracing::debug!(id, "Ejected window from stack to floating");
     }
@@ -1254,6 +1264,7 @@ impl Grid {
             // Re-focus the top of the stack.
             self.focused_window = Some(stack[0]);
         }
+        self.sync_stack_indices(ws_coords);
     }
 
     /// Move the focused window one position toward the end of its slot's stack.
@@ -1282,6 +1293,7 @@ impl Grid {
             self.focused_window = Some(new_top);
             self.ws_mut(ws_coords.0, ws_coords.1).record_focus(new_top);
         }
+        self.sync_stack_indices(ws_coords);
     }
 
     /// Rename a workspace cell. Stores the name for IPC/OSD display.
@@ -1644,19 +1656,32 @@ impl Grid {
         id
     }
 
+    /// Update `Window.stack_index` for every window in every slot of `ws_coords`.
+    fn sync_stack_indices(&mut self, ws_coords: (u8, u8)) {
+        let pairs: Vec<(WindowId, u32)> = Slot::ALL
+            .iter()
+            .flat_map(|&slot| self.ws_mut(ws_coords.0, ws_coords.1).reindex_slot(slot))
+            .collect();
+        for (id, idx) in pairs {
+            if let Some(w) = self.windows.get_mut(&id) {
+                w.stack_index = idx;
+            }
+        }
+    }
+
     /// Remove a window from all slot/floating/promotion stacks WITHOUT touching
     /// focus history (used for reassignment, not removal from compositor).
     fn detach_from_stacks(&mut self, id: WindowId, ws_coords: (u8, u8)) {
-        let ws = self.ws_mut(ws_coords.0, ws_coords.1);
-        for stack in ws.slots.values_mut() {
-            stack.retain(|&w| w != id);
+        {
+            let ws = self.ws_mut(ws_coords.0, ws_coords.1);
+            for stack in ws.slots.values_mut() {
+                stack.retain(|&w| w != id);
+            }
+            ws.floating.retain(|&w| w != id);
+            ws.fullscreen_stack.retain(|&w| w != id);
+            ws.total_fullscreen_stack.retain(|&w| w != id);
         }
-        ws.floating.retain(|&w| w != id);
-        ws.fullscreen_stack.retain(|&w| w != id);
-        ws.total_fullscreen_stack.retain(|&w| w != id);
-        for slot in window::Slot::ALL {
-            ws.reindex_slot(slot);
-        }
+        self.sync_stack_indices(ws_coords);
     }
 }
 
