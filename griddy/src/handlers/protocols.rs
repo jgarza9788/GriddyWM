@@ -112,7 +112,9 @@ impl XdgActivationHandler for GlobalState {
         let ws_coords = self.grid.windows.get(&win_id).map(|w| w.workspace);
 
         // Switch to the window's workspace if it's not the current one.
-        if let Some(ws) = ws_coords && ws != self.grid.focused {
+        if let Some(ws) = ws_coords
+            && ws != self.grid.focused
+        {
             self.grid.switch_workspace(ws);
         }
 

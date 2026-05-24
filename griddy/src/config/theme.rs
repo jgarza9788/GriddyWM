@@ -321,7 +321,6 @@ pub struct GapsConfig {
     pub workspaces: WorkspaceGapConfig,
 }
 
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct WindowGapConfig {
     /// Gap between adjacent tiled windows.

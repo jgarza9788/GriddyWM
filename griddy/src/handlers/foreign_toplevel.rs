@@ -261,7 +261,9 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
         match request {
             zwlr_foreign_toplevel_handle_v1::Request::Activate { seat: _ } => {
                 let ws = state.grid.windows.get(&id).map(|w| w.workspace);
-                if let Some(coords) = ws && coords != state.grid.focused {
+                if let Some(coords) = ws
+                    && coords != state.grid.focused
+                {
                     state.grid.switch_workspace(coords);
                     state
                         .pending_events
@@ -294,7 +296,9 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
                     .windows
                     .get(&id)
                     .map(|w| (w.workspace, w.current_state));
-                if let Some((_coords, ws)) = info && !matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
+                if let Some((_coords, ws)) = info
+                    && !matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen)
+                {
                     state.grid.set_focus(id);
                     state.grid.toggle_fullscreen();
                     state.wlr_update_all_states();
@@ -306,7 +310,9 @@ impl Dispatch<ZwlrForeignToplevelHandleV1, WindowId> for GlobalState {
                     .windows
                     .get(&id)
                     .map(|w| (w.workspace, w.current_state));
-                if let Some((_coords, ws)) = info && matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen) {
+                if let Some((_coords, ws)) = info
+                    && matches!(ws, WindowState::Fullscreen | WindowState::TotalFullscreen)
+                {
                     state.grid.set_focus(id);
                     state.grid.toggle_fullscreen();
                     state.wlr_update_all_states();

@@ -320,7 +320,9 @@ impl Grid {
                     if initial.state != WindowState::Tiled {
                         // Fullscreen → Tiled adaptation (§6.5.1 fullscreen cascade).
                         state_adapted = Some((initial.state, WindowState::Tiled, Some(*slot)));
-                    } else if let Some(req_slot) = initial.slot && req_slot != *slot {
+                    } else if let Some(req_slot) = initial.slot
+                        && req_slot != *slot
+                    {
                         // Half → Quarter slot adaptation (§6.5.1).
                         slot_adapted = Some((req_slot, *slot));
                     }
@@ -458,7 +460,9 @@ impl Grid {
         }
 
         // §22.4 window swallowing: if this window swallowed another, unswallow it.
-        if let Some(swallowed_id) = window.swallowed_id && let Some(sw) = self.windows.get_mut(&swallowed_id) {
+        if let Some(swallowed_id) = window.swallowed_id
+            && let Some(sw) = self.windows.get_mut(&swallowed_id)
+        {
             sw.is_swallowed = false;
             // Give focus back to the swallowed window.
             self.focused_window = Some(swallowed_id);
@@ -787,8 +791,7 @@ impl Grid {
                 self.forward_history.pop_back();
             }
             self.focused = prev;
-            self.focused_window =
-                self.ws(prev.0, prev.1).focus_history.front().copied();
+            self.focused_window = self.ws(prev.0, prev.1).focus_history.front().copied();
         }
     }
 
@@ -817,7 +820,9 @@ impl Grid {
 
     /// Send an xdg_toplevel.close request to the focused window.
     pub fn close_focused(&self) {
-        if let Some(id) = self.focused_window && let Some(w) = self.windows.get(&id) {
+        if let Some(id) = self.focused_window
+            && let Some(w) = self.windows.get(&id)
+        {
             w.surface.send_close();
         }
     }
@@ -1171,7 +1176,9 @@ impl Grid {
             },
         );
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-        if let Some(pos) = stack.iter().position(|&x| x == id) && pos > 0 {
+        if let Some(pos) = stack.iter().position(|&x| x == id)
+            && pos > 0
+        {
             stack.remove(pos);
             stack.insert(0, id);
         }
@@ -1240,7 +1247,9 @@ impl Grid {
             },
         );
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-        if let Some(pos) = stack.iter().position(|&x| x == id) && pos > 0 {
+        if let Some(pos) = stack.iter().position(|&x| x == id)
+            && pos > 0
+        {
             stack.swap(pos, pos - 1);
             // Re-focus the top of the stack.
             self.focused_window = Some(stack[0]);
@@ -1264,7 +1273,9 @@ impl Grid {
             },
         );
         let stack = self.ws_mut(ws_coords.0, ws_coords.1).slot_stack_mut(slot);
-        if let Some(pos) = stack.iter().position(|&x| x == id) && pos + 1 < stack.len() {
+        if let Some(pos) = stack.iter().position(|&x| x == id)
+            && pos + 1 < stack.len()
+        {
             stack.swap(pos, pos + 1);
             // The window that surfaced to index 0 is now the visible/focused one.
             let new_top = stack[0];
@@ -1347,14 +1358,21 @@ impl Grid {
         // Move windows from out-of-bounds cells into the nearest valid cell.
         // Collect (id, old_ws, new_ws) for windows that need relocation.
         type WindowRelocation = (WindowId, (u8, u8), (u8, u8));
-        let relocations: Vec<WindowRelocation> = self.windows.values()
+        let relocations: Vec<WindowRelocation> = self
+            .windows
+            .values()
             .filter_map(|w| {
                 let (wc, wr) = w.workspace;
-                if wc == u8::MAX { return None; } // special workspace
+                if wc == u8::MAX {
+                    return None;
+                } // special workspace
                 let cc = wc.min(new_cols - 1);
                 let cr = wr.min(new_rows - 1);
-                if (cc, cr) != (wc, wr) { Some((w.id, (wc, wr), (cc, cr))) }
-                else { None }
+                if (cc, cr) != (wc, wr) {
+                    Some((w.id, (wc, wr), (cc, cr)))
+                } else {
+                    None
+                }
             })
             .collect();
         for (id, old_ws, new_ws) in relocations {
@@ -1399,7 +1417,10 @@ impl Grid {
     /// workspaces for Tiled/Fullscreen movers (§6.7.1).
     ///
     /// Returns the move result so the caller can emit IPC events.
-    pub fn move_window_direction_ex(&mut self, direction: FocusDirection) -> Option<MoveDirectionResult> {
+    pub fn move_window_direction_ex(
+        &mut self,
+        direction: FocusDirection,
+    ) -> Option<MoveDirectionResult> {
         let id = self.focused_window?;
         let (ws_col, ws_row, mover_state) = match self.windows.get(&id) {
             Some(w) => (w.workspace.0, w.workspace.1, w.current_state),

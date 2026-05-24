@@ -259,7 +259,9 @@ fn main() -> Result<()> {
 
     if args.check {
         // Validate all subsidiary config files too.
-        if let Some(ref path) = resolved_config_path && let Some(dir) = path.parent() {
+        if let Some(ref path) = resolved_config_path
+            && let Some(dir) = path.parent()
+        {
             let _theme = config::load_config(Some(path)); // already done above
             let _rules = dir.join("rules.toml");
             let _tpls = config::load_templates(dir);
@@ -270,7 +272,9 @@ fn main() -> Result<()> {
     }
 
     // ── Replace running instance if requested ─────────────────────────────────
-    if args.replace && let Err(e) = replace_running_instance() {
+    if args.replace
+        && let Err(e) = replace_running_instance()
+    {
         tracing::warn!("replace: {e}");
     }
 

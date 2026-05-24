@@ -676,7 +676,10 @@ impl GlobalState {
 
         for mapped in &self.layer_surfaces {
             let cached = compositor::with_states(mapped.surface.wl_surface(), |states| {
-                *states.cached_state.get::<LayerSurfaceCachedState>().current()
+                *states
+                    .cached_state
+                    .get::<LayerSurfaceCachedState>()
+                    .current()
             });
             let px = match cached.exclusive_zone {
                 ExclusiveZone::Exclusive(v) => v as i32,

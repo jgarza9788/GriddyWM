@@ -182,7 +182,10 @@ pub fn resolve(
             };
 
             // Pass 1: Half → Quarter adaptation
-            if slot_adaptation && slot.is_half() && let Some(adapted) = adapt_half_to_quarter(ws, slot) {
+            if slot_adaptation
+                && slot.is_half()
+                && let Some(adapted) = adapt_half_to_quarter(ws, slot)
+            {
                 return ResolveResult {
                     placement: Placement::Tiled {
                         slot: adapted,

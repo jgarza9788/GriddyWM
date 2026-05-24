@@ -599,26 +599,22 @@ fn hypr_action_to_griddy(action: &str, args: &str) -> String {
             }
         }
         "pseudo" => "state-floating-toggle".into(),
-        "movefocus" => {
-            match args {
-                "l" => "focus-left",
-                "r" => "focus-right",
-                "u" => "focus-up",
-                "d" => "focus-down",
-                _ => "",
-            }
-            .into()
+        "movefocus" => match args {
+            "l" => "focus-left",
+            "r" => "focus-right",
+            "u" => "focus-up",
+            "d" => "focus-down",
+            _ => "",
         }
-        "movewindow" => {
-            match args {
-                "l" => "move-window-direction left",
-                "r" => "move-window-direction right",
-                "u" => "move-window-direction up",
-                "d" => "move-window-direction down",
-                _ => "",
-            }
-            .into()
+        .into(),
+        "movewindow" => match args {
+            "l" => "move-window-direction left",
+            "r" => "move-window-direction right",
+            "u" => "move-window-direction up",
+            "d" => "move-window-direction down",
+            _ => "",
         }
+        .into(),
         "workspace" => {
             if let Ok(n) = args.trim().parse::<u8>() {
                 format!("workspace {}", n - 1)
@@ -784,15 +780,13 @@ fn sway_action_to_griddy(action: &str) -> String {
         "floating toggle" => "state-floating-toggle".into(),
         "fullscreen toggle" => "state-fullscreen-toggle".into(),
         a if a.starts_with("exec ") => a.to_owned(),
-        a if a.starts_with("focus ") => {
-            match a.strip_prefix("focus ").unwrap_or("").trim() {
-                "left" => "focus-left".into(),
-                "right" => "focus-right".into(),
-                "up" => "focus-up".into(),
-                "down" => "focus-down".into(),
-                _ => String::new(),
-            }
-        }
+        a if a.starts_with("focus ") => match a.strip_prefix("focus ").unwrap_or("").trim() {
+            "left" => "focus-left".into(),
+            "right" => "focus-right".into(),
+            "up" => "focus-up".into(),
+            "down" => "focus-down".into(),
+            _ => String::new(),
+        },
         a if a.starts_with("move ") => {
             let rest = a.strip_prefix("move ").unwrap_or("").trim();
             match rest {
@@ -828,7 +822,13 @@ fn import_niri(src: &str) -> String {
         // Niri keybind: `Mod+q { close-window; }`
         if line.contains('{') {
             let before = line.split('{').next().unwrap_or("").trim();
-            let action_part = line.split('{').nth(1).unwrap_or("").trim().trim_end_matches('}').trim();
+            let action_part = line
+                .split('{')
+                .nth(1)
+                .unwrap_or("")
+                .trim()
+                .trim_end_matches('}')
+                .trim();
             let keys: Vec<&str> = before.split('+').collect();
             if keys.len() >= 2 {
                 let mods_vec: Vec<String> = keys[..keys.len() - 1]

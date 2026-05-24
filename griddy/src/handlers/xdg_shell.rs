@@ -1,7 +1,7 @@
 use smithay::{
     delegate_foreign_toplevel_list, delegate_xdg_decoration, delegate_xdg_shell,
     reexports::wayland_server::protocol::wl_seat::WlSeat,
-    utils::{Serial, SERIAL_COUNTER},
+    utils::{SERIAL_COUNTER, Serial},
     wayland::{
         foreign_toplevel_list::{ForeignToplevelListHandler, ForeignToplevelListState},
         shell::xdg::{
@@ -81,7 +81,9 @@ impl XdgShellHandler for GlobalState {
         }
 
         // §6.9 Transient dialogs: if xdg_toplevel.set_parent is set, float centered on parent.
-        if hints.state.is_none() && let Some(ref par_surface) = parent_surface {
+        if hints.state.is_none()
+            && let Some(ref par_surface) = parent_surface
+        {
             let par_id = par_surface.id();
             if let Some(par_wid) = self.grid.window_id_for_surface(&par_id)
                 && let Some(par_rect) = self.grid.compute_rect(par_wid)
@@ -101,7 +103,8 @@ impl XdgShellHandler for GlobalState {
         }
 
         // §22.1 Session restore: if no rule set workspace/slot yet, check saved session.
-        if hints.workspace.is_none() && hints.slot.is_none()
+        if hints.workspace.is_none()
+            && hints.slot.is_none()
             && let Some(ref mut sess) = self.session
             && let Some(entry) = sess.take_hint(&app_id, &title)
         {
@@ -316,8 +319,14 @@ impl XdgShellHandler for GlobalState {
         }
 
         // Update keyboard focus to the new window (unless the rule suppressed it or blocked).
-        if self.grid.focused_window == Some(id) && let Some(keyboard) = self.seat.get_keyboard() {
-            keyboard.set_focus(self, Some(surface.wl_surface().clone()), SERIAL_COUNTER.next_serial());
+        if self.grid.focused_window == Some(id)
+            && let Some(keyboard) = self.seat.get_keyboard()
+        {
+            keyboard.set_focus(
+                self,
+                Some(surface.wl_surface().clone()),
+                SERIAL_COUNTER.next_serial(),
+            );
         }
     }
 

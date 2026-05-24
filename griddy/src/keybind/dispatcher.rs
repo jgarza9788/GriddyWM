@@ -669,8 +669,12 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
             let result = state.grid.move_window_direction_ex(dir);
             if duration_ms > 0 {
                 for (id, old_rect) in before {
-                    if let Some(new_rect) = state.grid.compute_rect(id) && old_rect != new_rect {
-                        state.move_anims.insert(id, MoveAnim::new(old_rect, duration_ms));
+                    if let Some(new_rect) = state.grid.compute_rect(id)
+                        && old_rect != new_rect
+                    {
+                        state
+                            .move_anims
+                            .insert(id, MoveAnim::new(old_rect, duration_ms));
                     }
                 }
             }
@@ -886,7 +890,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
                 state.overview_focused = state.grid.focused;
                 state.overview_window_idx = 0;
                 state.pending_events.push(Event::OverviewOpened);
-                state.pending_events.push(Event::ViewModeChanged { mode: "overview".into() });
+                state.pending_events.push(Event::ViewModeChanged {
+                    mode: "overview".into(),
+                });
             } else {
                 // Cancel any active window grab when exiting overview.
                 if let Some(win_id) = state.overview_grabbed_window.take()
@@ -1131,7 +1137,9 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
 
 /// Update keyboard focus to match the grid's focused window.
 pub fn sync_focus(state: &mut GlobalState) {
-    if let Some(id) = state.grid.focused_window && let Some(w) = state.grid.windows.get_mut(&id) {
+    if let Some(id) = state.grid.focused_window
+        && let Some(w) = state.grid.windows.get_mut(&id)
+    {
         w.is_urgent = false;
     }
     if let Some(keyboard) = state.seat.get_keyboard() {
@@ -1477,8 +1485,12 @@ fn with_move_anim(state: &mut GlobalState, f: impl FnOnce(&mut GlobalState)) {
 
     // For each window that moved, start a move animation from its old rect.
     for (id, old_rect) in before {
-        if let Some(new_rect) = state.grid.compute_rect(id) && old_rect != new_rect {
-            state.move_anims.insert(id, MoveAnim::new(old_rect, duration_ms));
+        if let Some(new_rect) = state.grid.compute_rect(id)
+            && old_rect != new_rect
+        {
+            state
+                .move_anims
+                .insert(id, MoveAnim::new(old_rect, duration_ms));
         }
     }
 }

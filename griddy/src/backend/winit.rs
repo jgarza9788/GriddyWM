@@ -253,10 +253,8 @@ pub fn run(
         }
 
         // Advance / expire slide animation
-        if let Some(ref anim) = state.slide_anim {
-            if anim.is_done() {
-                state.slide_anim = None;
-            }
+        if let Some(ref anim) = state.slide_anim && anim.is_done() {
+            state.slide_anim = None;
         }
 
         let screen_rect: Rectangle<i32, Physical> =
@@ -360,25 +358,25 @@ pub fn run(
             }
             // Sticky windows not already rendered (from other workspaces).
             for w in state.grid.windows.values() {
-                if w.sticky && !seen_ids.contains(&w.id) && !w.is_swallowed {
-                    if let Some(r) = state.grid.compute_rect(w.id) {
-                        let effective_rect = state
-                            .move_anims
-                            .get(&w.id)
-                            .map(|ma| ma.lerp_rect(r))
-                            .unwrap_or(r);
-                        items.push(RenderItem {
-                            surface: w.surface.wl_surface().clone(),
-                            rect: effective_rect,
-                            window_id: w.id,
-                            is_focused: false,
-                            is_fullscreen: false,
-                            is_urgent: w.is_urgent,
-                            stack_depth: 1,
-                            opacity: w.opacity,
-                            border_color: w.border_color.clone(),
-                        });
-                    }
+                if w.sticky && !seen_ids.contains(&w.id) && !w.is_swallowed
+                    && let Some(r) = state.grid.compute_rect(w.id)
+                {
+                    let effective_rect = state
+                        .move_anims
+                        .get(&w.id)
+                        .map(|ma| ma.lerp_rect(r))
+                        .unwrap_or(r);
+                    items.push(RenderItem {
+                        surface: w.surface.wl_surface().clone(),
+                        rect: effective_rect,
+                        window_id: w.id,
+                        is_focused: false,
+                        is_fullscreen: false,
+                        is_urgent: w.is_urgent,
+                        stack_depth: 1,
+                        opacity: w.opacity,
+                        border_color: w.border_color.clone(),
+                    });
                 }
             }
             items
@@ -509,11 +507,10 @@ pub fn run(
                         let cached = smithay::wayland::compositor::with_states(
                             m.surface.wl_surface(),
                             |states| {
-                                states
+                                *states
                                     .cached_state
                                     .get::<LayerSurfaceCachedState>()
                                     .current()
-                                    .clone()
                             },
                         );
                         let r = layer_rect(&cached, ow, oh);
@@ -527,7 +524,7 @@ pub fn run(
                         );
                         Some(LayerRenderData {
                             elements,
-                            layer: m.layer.clone(),
+                            layer: m.layer,
                         })
                     })
                     .collect()
@@ -1329,27 +1326,27 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
 
                         // ── Pointer-constraint break key (§8.11) ───────────────
                         // Hardcoded — cannot be overridden or intercepted by apps.
-                        if key_state == KeyState::Pressed {
-                            if let Some((break_sym, break_mask)) = data.constraint_break_key {
-                                let mask: u32 =
-                                    (if modifiers.logo  { 1u32 } else { 0 })
-                                    | (if modifiers.alt  { 2 } else { 0 })
-                                    | (if modifiers.ctrl { 4 } else { 0 })
-                                    | (if modifiers.shift{ 8 } else { 0 });
-                                if sym == break_sym && mask == break_mask {
-                                    // Deactivate all pointer constraints for the focused surface.
-                                    if let Some(surface) = data.grid.focused_surface() {
-                                        if let Some(pointer) = data.seat.get_pointer() {
-                                            use smithay::wayland::pointer_constraints::with_pointer_constraint;
-                                            with_pointer_constraint(&surface, &pointer, |c| {
-                                                if let Some(c) = c {
-                                                    c.deactivate();
-                                                }
-                                            });
+                        if key_state == KeyState::Pressed
+                            && let Some((break_sym, break_mask)) = data.constraint_break_key
+                        {
+                            let mask: u32 =
+                                (if modifiers.logo  { 1u32 } else { 0 })
+                                | (if modifiers.alt  { 2 } else { 0 })
+                                | (if modifiers.ctrl { 4 } else { 0 })
+                                | (if modifiers.shift{ 8 } else { 0 });
+                            if sym == break_sym && mask == break_mask {
+                                // Deactivate all pointer constraints for the focused surface.
+                                if let Some(surface) = data.grid.focused_surface()
+                                    && let Some(pointer) = data.seat.get_pointer()
+                                {
+                                    use smithay::wayland::pointer_constraints::with_pointer_constraint;
+                                    with_pointer_constraint(surface, &pointer, |c| {
+                                        if let Some(c) = c {
+                                            c.deactivate();
                                         }
-                                    }
-                                    return FilterResult::Intercept(None);
+                                    });
                                 }
+                                return FilterResult::Intercept(None);
                             }
                         }
 
@@ -1418,26 +1415,26 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                         }
 
                         // ── Submap-aware lookup ───────────────────────────────
-                        if let Some(submap_name) = data.active_submap.clone() {
-                            if let Some(sub) = data.submap_tables.get(&submap_name) {
-                                if sub.is_exit_key(sym) {
-                                    return FilterResult::Intercept(Some(Action::SubmapReset));
+                        if let Some(submap_name) = data.active_submap.clone()
+                            && let Some(sub) = data.submap_tables.get(&submap_name)
+                        {
+                            if sub.is_exit_key(sym) {
+                                return FilterResult::Intercept(Some(Action::SubmapReset));
+                            }
+                            match sub.lookup(sym, modifiers) {
+                                Some(action) => {
+                                    if sub.exit_after_action {
+                                        return FilterResult::Intercept(Some(
+                                            Action::SubmapActionThenReset(Box::new(action)),
+                                        ));
+                                    }
+                                    return FilterResult::Intercept(Some(action));
                                 }
-                                match sub.lookup(sym, modifiers) {
-                                    Some(action) => {
-                                        if sub.exit_after_action {
-                                            return FilterResult::Intercept(Some(
-                                                Action::SubmapActionThenReset(Box::new(action)),
-                                            ));
-                                        }
-                                        return FilterResult::Intercept(Some(action));
+                                None => {
+                                    if sub.exit_on_unhandled {
+                                        return FilterResult::Intercept(Some(Action::SubmapReset));
                                     }
-                                    None => {
-                                        if sub.exit_on_unhandled {
-                                            return FilterResult::Intercept(Some(Action::SubmapReset));
-                                        }
-                                        return FilterResult::Intercept(None);
-                                    }
+                                    return FilterResult::Intercept(None);
                                 }
                             }
                         }
@@ -1471,31 +1468,29 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                         }
                     },
                 );
-                if let Some(Some(action)) = action {
-                    if dispatcher::dispatch(action, state) {
-                        state.should_exit = true;
-                    }
+                if let Some(Some(action)) = action && dispatcher::dispatch(action, state) {
+                    state.should_exit = true;
                 }
                 // Detect XKB layout changes (e.g. Ctrl+Shift group switch).
                 // Layout name is only meaningful after the modifier state updates,
                 // so we check after input() returns.
-                if key_state == smithay::backend::input::KeyState::Pressed {
-                    if let Some(kb) = state.seat.get_keyboard() {
-                        let layout_now = kb.with_xkb_state(state, |ctx| {
-                            let xkb = ctx.xkb().lock().unwrap();
-                            xkb.layout_name(xkb.active_layout()).to_string()
-                        });
-                        let prev = state.current_keyboard_layout.clone();
-                        if !prev.is_empty() && layout_now != prev {
-                            state.pending_events.push(
-                                crate::ipc::events::Event::KeyboardLayoutChanged {
-                                    device: "seat0".into(),
-                                    layout: layout_now.clone(),
-                                },
-                            );
-                        }
-                        state.current_keyboard_layout = layout_now;
+                if key_state == smithay::backend::input::KeyState::Pressed
+                    && let Some(kb) = state.seat.get_keyboard()
+                {
+                    let layout_now = kb.with_xkb_state(state, |ctx| {
+                        let xkb = ctx.xkb().lock().unwrap();
+                        xkb.layout_name(xkb.active_layout()).to_string()
+                    });
+                    let prev = state.current_keyboard_layout.clone();
+                    if !prev.is_empty() && layout_now != prev {
+                        state.pending_events.push(
+                            crate::ipc::events::Event::KeyboardLayoutChanged {
+                                device: "seat0".into(),
+                                layout: layout_now.clone(),
+                            },
+                        );
                     }
+                    state.current_keyboard_layout = layout_now;
                 }
             }
         }
@@ -1546,10 +1541,10 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                             .unwrap_or(false);
                         if is_still_tiled {
                             // Center the floating window under the cursor
-                            if let Some(rect) = state.grid.compute_rect(id) {
-                                if let Some(w) = state.grid.windows.get_mut(&id) {
-                                    w.floating_geom = rect;
-                                }
+                            if let Some(rect) = state.grid.compute_rect(id)
+                                && let Some(w) = state.grid.windows.get_mut(&id)
+                            {
+                                w.floating_geom = rect;
                             }
                             state.grid.focused_window = Some(id);
                             state.grid.toggle_floating();
@@ -1612,10 +1607,10 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
             } else {
                 // Update keyboard focus based on cursor position
                 let hit = state.grid.window_at(x, y);
-                if let Some(id) = hit {
-                    if state.config.input.follow_mouse != crate::config::types::FollowMouse::Off {
-                        update_keyboard_focus_to(state, Some(id));
-                    }
+                if let Some(id) = hit
+                    && state.config.input.follow_mouse != crate::config::types::FollowMouse::Off
+                {
+                    update_keyboard_focus_to(state, Some(id));
                 }
             }
 
@@ -1708,42 +1703,42 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                 // Check [[bind]] mouse entries (§9.3) first — user-defined binds take priority.
                 if let Some(kb) = state.seat.get_keyboard() {
                     let mods = kb.modifier_state();
-                    if let Some(action) = state.keybind_table.lookup_button(button, &mods) {
-                        if dispatcher::dispatch(action, state) {
-                            state.should_exit = true;
-                        }
-                        // Don't consume the event — still forward to clients below.
+                    if let Some(action) = state.keybind_table.lookup_button(button, &mods)
+                        && dispatcher::dispatch(action, state)
+                    {
+                        state.should_exit = true;
                     }
+                    // Don't consume the event — still forward to clients below.
                 }
 
                 if mod_held && (button == BTN_LEFT || button == BTN_RIGHT) {
                     // $mod + drag: move/resize floating, or unsnap tiled window
-                    if let Some(id) = state.grid.window_at(x, y) {
-                        if let Some(w) = state.grid.windows.get(&id) {
-                            let is_tiled = w.current_state == WindowState::Tiled;
-                            let is_floating = w.current_state == WindowState::Floating;
-                            if is_floating || (is_tiled && button == BTN_LEFT) {
-                                let geom = w.floating_geom;
-                                let started_tiled = is_tiled;
-                                state.drag = Some(DragState {
-                                    window_id: id,
-                                    kind: if button == BTN_LEFT {
-                                        DragKind::Move
-                                    } else {
-                                        DragKind::Resize
-                                    },
-                                    start_cursor: (x, y),
-                                    start_x: geom.x,
-                                    start_y: geom.y,
-                                    start_w: geom.w,
-                                    start_h: geom.h,
-                                    snap_preview: None,
-                                    started_tiled,
-                                });
-                                state.grid.set_focus(id);
-                                update_keyboard_focus_to(state, Some(id));
-                                return;
-                            }
+                    if let Some(id) = state.grid.window_at(x, y)
+                        && let Some(w) = state.grid.windows.get(&id)
+                    {
+                        let is_tiled = w.current_state == WindowState::Tiled;
+                        let is_floating = w.current_state == WindowState::Floating;
+                        if is_floating || (is_tiled && button == BTN_LEFT) {
+                            let geom = w.floating_geom;
+                            let started_tiled = is_tiled;
+                            state.drag = Some(DragState {
+                                window_id: id,
+                                kind: if button == BTN_LEFT {
+                                    DragKind::Move
+                                } else {
+                                    DragKind::Resize
+                                },
+                                start_cursor: (x, y),
+                                start_x: geom.x,
+                                start_y: geom.y,
+                                start_w: geom.w,
+                                start_h: geom.h,
+                                snap_preview: None,
+                                started_tiled,
+                            });
+                            state.grid.set_focus(id);
+                            update_keyboard_focus_to(state, Some(id));
+                            return;
                         }
                     }
                 }
@@ -1753,13 +1748,11 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                 update_keyboard_focus_to(state, hit);
             } else {
                 // Release: apply edge snap if pending, then clear drag
-                if let Some(ref drag) = state.drag {
-                    if let Some(slot) = drag.snap_preview {
-                        // Ensure dragged window is focused so assign_slot targets it
-                        let drag_id = drag.window_id;
-                        state.grid.focused_window = Some(drag_id);
-                        state.grid.assign_slot(slot);
-                    }
+                if let Some(ref drag) = state.drag && let Some(slot) = drag.snap_preview {
+                    // Ensure dragged window is focused so assign_slot targets it
+                    let drag_id = drag.window_id;
+                    state.grid.focused_window = Some(drag_id);
+                    state.grid.assign_slot(slot);
                 }
                 state.drag = None;
             }
@@ -1789,7 +1782,9 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
             // Check Scroll:* binds (§9.3) before forwarding to clients.
             let hv = event.amount(Axis::Horizontal).unwrap_or(0.0);
             let vv = event.amount(Axis::Vertical).unwrap_or(0.0);
-            if (hv != 0.0 || vv != 0.0) && let Some(kb) = state.seat.get_keyboard() {
+            if (hv != 0.0 || vv != 0.0)
+                && let Some(kb) = state.seat.get_keyboard()
+            {
                 let mods = kb.modifier_state();
                 // Dispatch vertical bind (if any).
                 if vv != 0.0 {
@@ -1821,10 +1816,14 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                     frame = frame.value(Axis::Vertical, vv);
                 }
 
-                if let Some(d) = event.amount_v120(Axis::Horizontal) && d != 0.0 {
+                if let Some(d) = event.amount_v120(Axis::Horizontal)
+                    && d != 0.0
+                {
                     frame = frame.v120(Axis::Horizontal, d as i32);
                 }
-                if let Some(d) = event.amount_v120(Axis::Vertical) && d != 0.0 {
+                if let Some(d) = event.amount_v120(Axis::Vertical)
+                    && d != 0.0
+                {
                     frame = frame.v120(Axis::Vertical, d as i32);
                 }
 

@@ -29,10 +29,14 @@ impl Rule {
         fullscreen_request: bool,
     ) -> bool {
         let m = &self.match_;
-        if let Some(pat) = &m.app_id && !glob_match(pat, app_id) {
+        if let Some(pat) = &m.app_id
+            && !glob_match(pat, app_id)
+        {
             return false;
         }
-        if let Some(pat) = &m.title && !glob_match(pat, title) {
+        if let Some(pat) = &m.title
+            && !glob_match(pat, title)
+        {
             return false;
         }
         if let Some(pat) = &m.title_regex {
@@ -58,10 +62,14 @@ impl Rule {
                 None => return false,
             }
         }
-        if let Some(req) = m.fullscreen_request && fullscreen_request != req {
+        if let Some(req) = m.fullscreen_request
+            && fullscreen_request != req
+        {
             return false;
         }
-        if let Some(is_x) = m.is_xwayland && is_xwayland != is_x {
+        if let Some(is_x) = m.is_xwayland
+            && is_xwayland != is_x
+        {
             return false;
         }
         true

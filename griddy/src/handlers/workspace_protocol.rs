@@ -262,4 +262,3 @@ impl Dispatch<ExtWorkspaceHandleV1, (u8, u8)> for GlobalState {
         }
     }
 }
-
