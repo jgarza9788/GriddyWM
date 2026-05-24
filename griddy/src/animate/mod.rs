@@ -130,6 +130,40 @@ impl MoveAnim {
     }
 }
 
+// ─── Overview zoom animation ─────────────────────────────────────────────────
+
+/// In-progress overview zoom-in or zoom-out animation.
+#[derive(Debug, Clone)]
+pub struct OverviewAnim {
+    /// `true` = zooming into overview (opening), `false` = zooming back to normal (closing).
+    pub opening: bool,
+    pub started_at: Instant,
+    pub duration: Duration,
+}
+
+impl OverviewAnim {
+    pub fn new(opening: bool, duration_ms: u64) -> Self {
+        Self {
+            opening,
+            started_at: Instant::now(),
+            duration: Duration::from_millis(duration_ms),
+        }
+    }
+
+    pub fn is_done(&self) -> bool {
+        self.started_at.elapsed() >= self.duration
+    }
+
+    /// Progress toward the overview state: 0.0 = fully normal, 1.0 = fully open.
+    /// Increases while opening, decreases while closing.
+    pub fn overview_progress(&self) -> f32 {
+        let t = self.started_at.elapsed().as_secs_f32()
+            / self.duration.as_secs_f32().max(f32::EPSILON);
+        let eased = ease_in_out_cubic(t.min(1.0));
+        if self.opening { eased } else { 1.0 - eased }
+    }
+}
+
 // ─── Window open/close animation ─────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -884,24 +884,29 @@ pub fn dispatch(action: Action, state: &mut GlobalState) -> bool {
         }
 
         Action::OverviewToggle => {
-            state.is_overview = !state.is_overview;
-            if state.is_overview {
-                // Keyboard focus starts at the currently active workspace.
+            if !state.is_overview {
+                // Enter overview: set active immediately so rendering starts.
+                state.is_overview = true;
                 state.overview_focused = state.grid.focused;
                 state.overview_window_idx = 0;
+                state.overview_anim =
+                    Some(crate::animate::OverviewAnim::new(true, 220));
                 state.pending_events.push(Event::OverviewOpened);
                 state.pending_events.push(Event::ViewModeChanged {
                     mode: "overview".into(),
                 });
             } else {
-                // Cancel any active window grab when exiting overview.
+                // Start close animation; is_overview flips when anim finishes.
                 if let Some(win_id) = state.overview_grabbed_window.take()
                     && let Some(origin) = state.overview_grab_origin.take()
                 {
                     state.grid.focused_window = Some(win_id);
                     with_move_anim(state, |s| s.grid.move_window_to(origin));
                 }
+                state.overview_drag = None;
                 state.overview_window_idx = 0;
+                state.overview_anim =
+                    Some(crate::animate::OverviewAnim::new(false, 220));
                 state.pending_events.push(Event::OverviewClosed);
                 state.pending_events.push(Event::ViewModeChanged {
                     mode: "focus".into(),

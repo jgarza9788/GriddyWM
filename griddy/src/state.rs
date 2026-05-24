@@ -37,13 +37,27 @@ use smithay::{
 };
 use wayland_server::backend::ClientData as WlClientData;
 
-use crate::animate::{MoveAnim, WindowAnim, WorkspaceSlide};
+use crate::animate::{MoveAnim, OverviewAnim, WindowAnim, WorkspaceSlide};
 use crate::config::Config;
 use crate::grid::{Grid, window::WindowId};
 use crate::handlers::foreign_toplevel::WlrForeignToplevelState;
 use crate::handlers::workspace_protocol::ExtWorkspaceState;
 use crate::ipc::{IpcServer, events::Event};
 use crate::keybind::{BindTable, SubBindTable};
+
+// ─── Overview drag state ──────────────────────────────────────────────────────
+
+/// Window being dragged between workspace thumbnails in overview mode.
+#[derive(Debug, Clone)]
+pub struct OverviewDragState {
+    pub window_id: WindowId,
+    /// Workspace the window came from.
+    pub from_ws: (u8, u8),
+    /// Current cursor position (for drag indicator rendering).
+    pub cursor: (f64, f64),
+    /// Workspace thumbnail under the cursor (highlighted drop target), if any.
+    pub target_ws: Option<(u8, u8)>,
+}
 
 // ─── Drag state ───────────────────────────────────────────────────────────────
 
@@ -234,6 +248,10 @@ pub struct GlobalState {
     pub is_overview: bool,
     /// Which workspace thumbnail has keyboard focus in overview (§7.2).
     pub overview_focused: (u8, u8),
+    /// In-progress overview zoom animation (open or close).
+    pub overview_anim: Option<OverviewAnim>,
+    /// Window being dragged between thumbnails in overview mode.
+    pub overview_drag: Option<OverviewDragState>,
 
     /// Timestamp of the last user input event (keyboard/pointer/touch).
     pub last_input_instant: std::time::Instant,
@@ -616,6 +634,8 @@ impl GlobalState {
             move_anims: HashMap::new(),
             is_overview: initial_overview,
             overview_focused: initial_focused,
+            overview_anim: None,
+            overview_drag: None,
             last_input_instant: std::time::Instant::now(),
             idle_timers_fired: Vec::new(),
             minimap_visible: false,

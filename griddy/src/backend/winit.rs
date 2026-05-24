@@ -48,7 +48,6 @@ use crate::grid::layout;
 use crate::grid::window::{Slot, WindowState};
 use crate::handlers::layer_shell::layer_rect;
 use crate::ipc::commands;
-use crate::ipc::events::Event as IpcEvent;
 use crate::keybind::Action;
 use crate::keybind::dispatcher;
 use crate::state::{ClientData, DragKind, DragState, GlobalState};
@@ -257,6 +256,17 @@ pub fn run(
             && anim.is_done()
         {
             state.slide_anim = None;
+        }
+
+        // Expire overview animation; flip is_overview when close finishes
+        if let Some(ref anim) = state.overview_anim
+            && anim.is_done()
+        {
+            let was_opening = anim.opening;
+            state.overview_anim = None;
+            if !was_opening {
+                state.is_overview = false;
+            }
         }
 
         let screen_rect: Rectangle<i32, Physical> =
@@ -687,6 +697,20 @@ pub fn run(
                 let focused_ws = state.grid.focused;
                 let ov_focused = state.overview_focused;
                 let focused_win = state.grid.focused_window;
+                let drag_win = state.overview_drag.as_ref().map(|d| d.window_id);
+                let drag_target = state.overview_drag.as_ref().and_then(|d| d.target_ws);
+
+                // Zoom animation: lerp gap/margin from 0 → full so thumbnails
+                // appear to spread out from a tiled full-screen layout.
+                let ov_t = state
+                    .overview_anim
+                    .as_ref()
+                    .map(|a| a.overview_progress())
+                    .unwrap_or(1.0);
+                let lerp_i =
+                    |a: i32, b: i32| -> i32 { (a as f32 + (b - a) as f32 * ov_t) as i32 };
+                let anim_gap = lerp_i(0, OV_GAP_PX);
+                let anim_margin = lerp_i(0, OV_MARGIN_PX);
 
                 for ov_row in 0..rows {
                     for ov_col in 0..cols {
@@ -697,15 +721,18 @@ pub fn run(
                             rows,
                             ow,
                             oh,
-                            OV_GAP_PX,
-                            OV_MARGIN_PX,
+                            anim_gap,
+                            anim_margin,
                         );
                         let is_home = (ov_col, ov_row) == focused_ws;
                         let is_kb = (ov_col, ov_row) == ov_focused;
+                        let is_drag_target = drag_target == Some((ov_col, ov_row));
 
                         // ── Thumbnail border ──────────────────────────────────
-                        let border_px: i32 = if is_kb { 3 } else { 1 };
-                        let bc = if is_kb {
+                        let border_px: i32 = if is_drag_target { 4 } else if is_kb { 3 } else { 1 };
+                        let bc = if is_drag_target {
+                            lighten(accent, 0.25)
+                        } else if is_kb {
                             accent
                         } else if is_home {
                             accent_dim
@@ -723,7 +750,9 @@ pub fn run(
                         }
 
                         // ── Thumbnail background ──────────────────────────────
-                        let thumb_bg = if is_home {
+                        let thumb_bg = if is_drag_target {
+                            lighten(bg_alt, 0.12)
+                        } else if is_home {
                             lighten(bg_alt, 0.05)
                         } else {
                             bg_alt
@@ -741,6 +770,10 @@ pub fn run(
                         let scale_x = thumb.w as f64 / ow as f64;
                         let scale_y = thumb.h as f64 / oh as f64;
                         for (win, rect) in state.grid.visible_windows_for_ws((ov_col, ov_row)) {
+                            // Skip the window being dragged (draw it at cursor instead).
+                            if drag_win == Some(win.id) {
+                                continue;
+                            }
                             let wx = thumb.x + (rect.x as f64 * scale_x) as i32;
                             let wy = thumb.y + (rect.y as f64 * scale_y) as i32;
                             let ww = ((rect.w as f64 * scale_x) as i32).max(2);
@@ -766,6 +799,38 @@ pub fn run(
                                     .ok();
                             }
                         }
+                    }
+                }
+
+                // ── Overview drag ghost: draw dragged window following cursor ──
+                if let Some(ref drag) = state.overview_drag {
+                    // Size: proportional to an average thumbnail cell.
+                    let ghost_w = (ow / cols as i32 / 4).max(40);
+                    let ghost_h = (oh / rows as i32 / 4).max(30);
+                    let cx = drag.cursor.0 as i32 - ghost_w / 2;
+                    let cy = drag.cursor.1 as i32 - ghost_h / 2;
+                    let ghost_phys: Rectangle<i32, Physical> =
+                        Rectangle::new((cx, cy).into(), (ghost_w, ghost_h).into());
+                    if let Some(clipped) = ghost_phys.intersection(screen_rect) {
+                        frame
+                            .clear(Color32F::new(accent[0], accent[1], accent[2], 1.0), &[clipped])
+                            .ok();
+                        // Inner highlight so it looks like a labelled card.
+                        let inner: Rectangle<i32, Physical> = Rectangle::new(
+                            (clipped.loc.x + 2, clipped.loc.y + 2).into(),
+                            ((clipped.size.w - 4).max(1), (clipped.size.h - 4).max(1)).into(),
+                        );
+                        frame
+                            .clear(
+                                Color32F::new(
+                                    lighten(accent, 0.2)[0],
+                                    lighten(accent, 0.2)[1],
+                                    lighten(accent, 0.2)[2],
+                                    1.0,
+                                ),
+                                &[inner],
+                            )
+                            .ok();
                     }
                 }
 
@@ -1528,6 +1593,15 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                 }
             }
 
+            // Update overview drag target
+            if state.overview_drag.is_some() {
+                let target = overview_thumbnail_at(state, x, y);
+                if let Some(ref mut d) = state.overview_drag {
+                    d.cursor = (x, y);
+                    d.target_ws = target;
+                }
+            }
+
             // Apply drag if active
             if let Some(drag_clone) = state.drag.clone() {
                 let dx = x - drag_clone.start_cursor.0;
@@ -1661,12 +1735,34 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
             let mod_held = state
                 .seat
                 .get_keyboard()
-                .map(|kb| kb.modifier_state().logo)
+                .map(|kb| {
+                    let mods = kb.modifier_state();
+                    match state.config.input.mod_key.as_str() {
+                        "Alt" | "Mod1" => mods.alt,
+                        "Ctrl" | "Control" => mods.ctrl,
+                        "Shift" => mods.shift,
+                        _ => mods.logo,
+                    }
+                })
                 .unwrap_or(false);
 
-            // In overview mode, a click (without modifier) activates the clicked workspace.
-            if pressed && button == BTN_LEFT && !mod_held && state.is_overview {
+            // Overview mode: left click on a window starts a drag; click on
+            // background activates that workspace and exits overview.
+            if pressed && button == BTN_LEFT && state.is_overview
+                && state.overview_anim.as_ref().map(|a| a.overview_progress()).unwrap_or(1.0) > 0.8
+            {
                 let (cx, cy) = state.cursor_pos;
+                // Check if click lands on a window inside any thumbnail.
+                if let Some((win_id, from_ws)) = overview_window_at(state, cx, cy) {
+                    state.overview_drag = Some(crate::state::OverviewDragState {
+                        window_id: win_id,
+                        from_ws,
+                        cursor: (cx, cy),
+                        target_ws: Some(from_ws),
+                    });
+                    return;
+                }
+                // Click on thumbnail background → exit and switch workspace.
                 let ow = state.grid.output_w;
                 let oh = state.grid.output_h;
                 let cols = state.grid.cols;
@@ -1688,19 +1784,30 @@ fn handle_input(event: InputEvent<smithay::backend::winit::WinitInput>, state: &
                             && (cy as i32) >= thumb.y
                             && (cy as i32) < thumb.y + thumb.h
                         {
-                            // Exit overview and switch to the clicked workspace.
-                            state.is_overview = false;
-                            state.pending_events.push(IpcEvent::OverviewClosed);
-                            state.pending_events.push(IpcEvent::ViewModeChanged {
-                                mode: "focus".into(),
-                            });
+                            dispatcher::dispatch(Action::OverviewToggle, state);
                             dispatcher::dispatch(Action::WorkspaceTo(ov_col, ov_row), state);
                             return;
                         }
                     }
                 }
-                // Click outside all thumbnails: do nothing (consume the click).
+                // Click outside all thumbnails: consume.
                 return;
+            }
+
+            // Release overview drag.
+            if !pressed && button == BTN_LEFT {
+                if let Some(drag) = state.overview_drag.take() {
+                    let target = drag.target_ws.unwrap_or(drag.from_ws);
+                    if target == drag.from_ws {
+                        // No cross-workspace move: activate that workspace.
+                        dispatcher::dispatch(Action::OverviewToggle, state);
+                        dispatcher::dispatch(Action::WorkspaceTo(target.0, target.1), state);
+                    } else {
+                        state.grid.focused_window = Some(drag.window_id);
+                        state.grid.move_window_to(target);
+                    }
+                    return;
+                }
             }
 
             if pressed {
@@ -2016,6 +2123,70 @@ fn snap_slot_for_cursor(
 }
 
 /// Lighten an RGBA color by `amount` (clamped to 1.0 per channel).
+/// Find the first window under (cx, cy) across all overview thumbnails.
+/// Returns `(WindowId, workspace)` or `None`.
+fn overview_window_at(
+    state: &GlobalState,
+    cx: f64,
+    cy: f64,
+) -> Option<(crate::grid::window::WindowId, (u8, u8))> {
+    let ow = state.grid.output_w;
+    let oh = state.grid.output_h;
+    let cols = state.grid.cols;
+    let rows = state.grid.rows;
+    for ov_row in 0..rows {
+        for ov_col in 0..cols {
+            let thumb =
+                layout::overview_thumbnail_rect(ov_col, ov_row, cols, rows, ow, oh, OV_GAP_PX, OV_MARGIN_PX);
+            if (cx as i32) < thumb.x
+                || (cx as i32) >= thumb.x + thumb.w
+                || (cy as i32) < thumb.y
+                || (cy as i32) >= thumb.y + thumb.h
+            {
+                continue;
+            }
+            let sx = thumb.w as f64 / ow as f64;
+            let sy = thumb.h as f64 / oh as f64;
+            for (win, rect) in state.grid.visible_windows_for_ws((ov_col, ov_row)) {
+                let wx = thumb.x + (rect.x as f64 * sx) as i32;
+                let wy = thumb.y + (rect.y as f64 * sy) as i32;
+                let ww = ((rect.w as f64 * sx) as i32).max(2);
+                let wh = ((rect.h as f64 * sy) as i32).max(2);
+                if (cx as i32) >= wx
+                    && (cx as i32) < wx + ww
+                    && (cy as i32) >= wy
+                    && (cy as i32) < wy + wh
+                {
+                    return Some((win.id, (ov_col, ov_row)));
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Return which workspace thumbnail (col, row) contains (cx, cy), if any.
+fn overview_thumbnail_at(state: &GlobalState, cx: f64, cy: f64) -> Option<(u8, u8)> {
+    let ow = state.grid.output_w;
+    let oh = state.grid.output_h;
+    let cols = state.grid.cols;
+    let rows = state.grid.rows;
+    for ov_row in 0..rows {
+        for ov_col in 0..cols {
+            let thumb =
+                layout::overview_thumbnail_rect(ov_col, ov_row, cols, rows, ow, oh, OV_GAP_PX, OV_MARGIN_PX);
+            if (cx as i32) >= thumb.x
+                && (cx as i32) < thumb.x + thumb.w
+                && (cy as i32) >= thumb.y
+                && (cy as i32) < thumb.y + thumb.h
+            {
+                return Some((ov_col, ov_row));
+            }
+        }
+    }
+    None
+}
+
 fn lighten(c: [f32; 4], amount: f32) -> [f32; 4] {
     [
         (c[0] + amount).min(1.0),
