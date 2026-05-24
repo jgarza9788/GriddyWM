@@ -526,10 +526,10 @@ fn import_hyprland(src: &str) -> String {
         if line.starts_with("animation = windows,") {
             // `animation = windows, 1, 7, default`
             let parts: Vec<&str> = line.splitn(5, ',').collect();
-            if parts.len() >= 3 {
-                if let Ok(speed) = parts[2].trim().parse::<f64>() {
-                    open_ms = ((speed * 30.0) as u32).max(50);
-                }
+            if parts.len() >= 3
+                && let Ok(speed) = parts[2].trim().parse::<f64>()
+            {
+                open_ms = ((speed * 30.0) as u32).max(50);
             }
         }
     }
@@ -652,13 +652,13 @@ fn parse_hypr_color(s: &str) -> String {
     s.to_owned()
 }
 
-fn extract_kv<'a>(line: &'a str, key: &str) -> Option<String> {
+fn extract_kv(line: &str, key: &str) -> Option<String> {
     // Match `key = value` or `key=value`
     let stripped = line.trim();
-    if stripped.starts_with(key) {
-        let rest = stripped[key.len()..].trim_start();
-        if rest.starts_with('=') {
-            return Some(rest[1..].trim().to_owned());
+    if let Some(after_key) = stripped.strip_prefix(key) {
+        let rest = after_key.trim_start();
+        if let Some(value) = rest.strip_prefix('=') {
+            return Some(value.trim().to_owned());
         }
     }
     None
